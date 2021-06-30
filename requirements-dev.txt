@@ -1,0 +1,4 @@
+requests
+celery
+pytest-cov==2.8.1
+parameterized==0.7.1
