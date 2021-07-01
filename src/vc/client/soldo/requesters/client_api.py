@@ -1,6 +1,7 @@
 from vc.libs.decoratos import response_builder
-from vc.soldo.client.requesters.requester_base import RequesterSoldoBase
-from vc.soldo.client.requesters.schemas import ResponseInfo, UserBase, Order, OrderItem, CardResponse
+from .requester_base import RequesterSoldoBase
+from .schemas import ResponseInfo, UserBase, Order, OrderItem, CardResponse
+from .utils import request_timestamp
 
 
 class User(RequesterSoldoBase):
@@ -8,7 +9,7 @@ class User(RequesterSoldoBase):
     @response_builder(data_schema=ResponseInfo)
     def whoami(self):
         api_path = f'/business/v2/ping/whoami'
-        return self.request(self.url + api_path, method='get', headers=self.default_authorize().dict())
+        return self.request(api_path, method='get', headers=self.default_authorize().dict())
 
     @response_builder(data_schema=UserBase)
     def create(self, email: str, name:str, surname: str, custom_reference_id: str, job_title: str, **data):
@@ -25,11 +26,8 @@ class User(RequesterSoldoBase):
         h= self.advanced_authorize(
                 data, fields=("request_timestamp", "name", "surname", "mobile_access", "web_access"),
             ).dict(by_alias=True)
-        print(data)
-        print(user)
-        print(h)
         return self.request(
-            self.url + api_path, method='post',
+            api_path, method='post',
             headers=h,
             json=user)
 
@@ -38,7 +36,7 @@ class User(RequesterSoldoBase):
         # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#update-user-data
         api_path = f"/business/v2/employees/{id}"
         return self.request(
-            self.url + api_path, method='put',
+            api_path, method='put',
             headers=self.advanced_authorize(
                 data, fields=("custom_reference_id", "job_title", "mobile_number", "mobile_prefix",
                              "email", "enable_mobile_credential", "enable_web_credential"),
@@ -49,7 +47,7 @@ class User(RequesterSoldoBase):
 class Wallets(RequesterSoldoBase):
 
     @response_builder(data_schema=Order[OrderItem])
-    def create(self, request_timestamp, owner_type, currency, name):
+    def create(self, owner_type, currency, name):
         # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#update-user-data
         # {
         # "id":"6a5e0887-eaf6-4f49-95cb-6b7f245d04f3",
@@ -58,38 +56,37 @@ class Wallets(RequesterSoldoBase):
         # "total_paid_currency":"EUR",
         # "items":[{"id":"87d95150-41f3-46a5-9501-ca1b368696ca","itemType":"WALLET","category":"WALLET"}]}
         api_path = f"/business/v2/wallets/"
-        data = dict( request_timestamp=request_timestamp, owner_type=owner_type, currency=currency, name=name)
+        data = dict( request_timestamp=request_timestamp(), owner_type=owner_type, currency=currency, name=name)
         h = self.advanced_authorize(
-                data
-                , fields=("request_timestamp", "owner_type", "currency", "name"),
+                data, fields=("request_timestamp", "owner_type", "currency", "name"),
             ).dict(by_alias=True)
         return self.request(
-            self.url + api_path, method='post',
+            api_path, method='post',
             headers=h, json=data)
 
 
 class Card(RequesterSoldoBase):
 
     @response_builder(data_schema=Order[OrderItem])
-    def create(self, request_timestamp, owner_type, owner_public_id,
+    def create(self, owner_type, owner_public_id,
                     wallet_id, type="VIRTUAL", name=None, emboss_line4=None, card_label="aff"):
         # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#update-user-data
         api_path = f"/business/v2/cards/"
-        data = dict( request_timestamp=request_timestamp, name=name, emboss_line4=emboss_line4, owner_type=owner_type, owner_public_id= owner_public_id,
+        data = dict( request_timestamp=request_timestamp(), name=name, emboss_line4=emboss_line4, owner_type=owner_type, owner_public_id= owner_public_id,
                     wallet_id=wallet_id, type=type, card_label=card_label)
         h = self.advanced_authorize(
                 data
                 , fields=("request_timestamp", "owner_type", "owner_public_id", "wallet_id"),
             ).dict(by_alias=True)
         return self.request(
-            self.url + api_path, method='post',
+            api_path, method='post',
             headers=h, json=data)
 
     @response_builder(data_schema=CardResponse)
     def get(self, card_id: str, showSensitiveData: str = None):
         api_path = f"/business/v2/cards/{card_id}"
         return self.request(
-            self.url + api_path, method='get',
+            api_path, method='get',
             params={"showSensitiveData": showSensitiveData},
             headers=self.default_authorize().dict())
 
@@ -100,7 +97,7 @@ class Order(RequesterSoldoBase):
     def get(self, order_id: str):
         api_path = f"/business/v2/orders/{order_id}"
         return self.request(
-            self.url + api_path, method='get',
+            api_path, method='get',
             headers=self.default_authorize().dict())
 
 
@@ -112,7 +109,7 @@ class Group(RequesterSoldoBase):
         api_path = f"/business/v2/groups/{groupId}/resource"
         data = dict( id=id, type=type)
         return self.request(
-            self.url + api_path, method='post',
+            api_path, method='post',
             headers=self.advanced_authorize(data).dict(by_alias=True), json=data)
 
 

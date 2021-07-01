@@ -1,6 +1,6 @@
 from datetime import datetime
+from .base_class import Base
 from enum import Enum
-from vc.settings import CLASSBASEMODEL
 from sqlalchemy import Column, Integer, ForeignKey, String, Date, DateTime, func, Numeric, Boolean
 from sqlalchemy.orm import relationship
 
@@ -11,14 +11,14 @@ class StatusAccountVC(str, Enum):
     beta = "Beta"
 
 
-class AccountVC(CLASSBASEMODEL):
-    __tablename__ = "account_vc"
+class AccountVC(Base):
+    __tablename__ = "vc_account"
     number = Column(String(100))
     balance = Column(Numeric, default=0)
     user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     status = Column(String(15), default=StatusAccountVC.deactivated.value)
-    user = relationship("User", back_populates="accounts")
-    campaigns_vc = relationship("CampaignVC", back_populates="account_vc")
+    user = relationship("User", backref="vc_accounts")
+    campaigns = relationship("CampaignC4A", back_populates="account")
     activated_on = Column(DateTime, index=True)
     created_on = Column(DateTime, default=datetime.now, server_default=func.now(), index=True)
 
@@ -44,14 +44,16 @@ class CustomStatus(str, Enum):
     not_set = " "
 
 
-class CampaignVC(CLASSBASEMODEL):
-    __tablename__ = "campaign_vc"
+class CampaignVC(Base):
+    __tablename__ = "vc_campaign"
     number = Column(String(100))
     balance = Column(Numeric, default=0)
-    account_vc_id = Column(Integer, ForeignKey("account_vc.id", ondelete="CASCADE"), index=True, nullable=False)
-    account_vc = relationship("AccountVC", back_populates="campaigns_vc")
+    account_id = Column(Integer, ForeignKey("vc_account.id", ondelete="CASCADE"), index=True, nullable=False)
+
+    account = relationship("AccountVC", backref="campaigns")
+
     type = Column(String, default=CampaignType.facebook.value)
-    cards = relationship("CardVC", back_populates="campaign_vc")
+    cards = relationship("CardVC", back_populates="campaign")
 
     @property
     def count_cards(self):
@@ -82,15 +84,16 @@ class PaymentSystem(str, Enum):
     visa = "VISA"
 
 
-class CardVC(CLASSBASEMODEL):
+class CardVC(Base):
+    __tablename__ = "vc_card"
     bin_id = Column(Integer)
     system_id = Column(Integer, index=True)
     reference = Column(String, index=True, unique=True, nullable=False)
     is_slave = Column(Boolean, default=False)
     master_card = relationship("MasterCard", uselist=False ,backref="master_card")
 
-    campaign_vc_id = Column(Integer, ForeignKey("campaign_vc.id", ondelete="CASCADE"))
-    campaign_vc = relationship("CampaignVC", back_populates="cards")
+    campaign_vc_id = Column(Integer, ForeignKey("vc_campaign.id", ondelete="CASCADE"))
+    campaign = relationship("CampaignVC", back_populates="cards")
     balance = Column(Numeric, default=0)
     PAN = Column(String, index=True)
     cvv = Column(String(5))

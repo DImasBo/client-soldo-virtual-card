@@ -1,5 +1,6 @@
 import base64
 import logging
+import time
 
 from cryptography.exceptions import AlreadyFinalized
 from cryptography.exceptions import UnsupportedAlgorithm
@@ -8,16 +9,16 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
-from vc import settings
+
 
 logger = logging.getLogger(__name__)
 
 
-def decrypt(ciphertext: str, keyPath: str = settings.PATH_RSA_PRIVATE):
+def decrypt(ciphertext: str, ):
+    from vc.client.soldo.client import Soldo
     try:
         # load private key
-        print(keyPath)
-        with open(keyPath, "rb") as key_file:
+        with open(Soldo.settings.PATH_RSA_PRIVATE, "rb") as key_file:
             privateKey = serialization.load_pem_private_key(
                 key_file.read(),
                 password=None,
@@ -59,10 +60,11 @@ def fingerprintHash(fingerprint):
 
 
 # function to be used to generate the fingerprint signature, input arguments are the hashed fingerprint to be signed and the private 2048 RSA key file path
-def fingerprintSignature(fingerprintH, keyPath: str = settings.PATH_RSA_PRIVATE):
+def fingerprintSignature(fingerprintH):
+    from vc.client.soldo.client import Soldo
     try:
         # load private key
-        with open(keyPath, "rb") as key_file:
+        with open(Soldo.settings.PATH_RSA_PRIVATE, "rb") as key_file:
             privateKey = serialization.load_pem_private_key(
                 key_file.read(),
                 password=None,
@@ -79,3 +81,7 @@ def fingerprintSignature(fingerprintH, keyPath: str = settings.PATH_RSA_PRIVATE)
         return base64.b64encode(signature)
     except UnsupportedAlgorithm:
         logger.exception("Signing failed")
+
+
+def request_timestamp(self):
+    return int(time.time())

@@ -5,14 +5,8 @@ from .utils import fingerprintHash, fingerprintSignature
 from typing import Optional
 from pydantic import Extra, BaseModel
 
-from vc import settings
-
 
 T = TypeVar('T')
-
-
-class ResponseDataBase(BaseModel):
-    pass
 
 
 class ResponseData(GenericModel, Generic[T]):
@@ -39,8 +33,9 @@ class HeadersSoldoBase(BaseModel):
     Authorization: Optional[str]
 
     def __init__(self, *args, **kwargs):
+        from vc.client.soldo.client import Soldo
         super().__init__(*args, **kwargs)
-        self.Authorization = f"Bearer {settings.ACCESS_TOKEN}"
+        self.Authorization = f"Bearer {Soldo.settings.ACCESS_TOKEN}"
 
     class Config:
         extra = Extra.allow
@@ -55,7 +50,8 @@ class HeadersSoldo(HeadersSoldoBase):
     fingerprintH: Optional[str]
     fingerprintS: Optional[str]
 
-    def __init__(self, data, fields=None, keyPath=settings.PATH_RSA_PRIVATE, **kwargs):
+    def __init__(self, data, fields=None, **kwargs):
+        from vc.client.soldo.client import Soldo
         super().__init__(**kwargs)
         if not fields:
             fields = data.keys()
@@ -64,10 +60,10 @@ class HeadersSoldo(HeadersSoldoBase):
             if data.get(field):
                 fingerprint += str(data.get(field))
                 print(fingerprint)
-        fingerprint += settings.TOKEN
+        fingerprint += Soldo.settings.TOKEN
         print(fingerprint)
         self.fingerprintH = fingerprintHash(fingerprint)
-        self.fingerprintS = fingerprintSignature(self.fingerprintH, keyPath)
+        self.fingerprintS = fingerprintSignature(self.fingerprintH, Soldo.settings.PATH_RSA_PRIVATE)
 
     class Config:
         fields = {

@@ -1,12 +1,11 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional, Generic, TypeVar, List, Dict
-
 from pydantic import BaseModel, Extra, root_validator
 from pydantic.generics import GenericModel
+from .utils import decrypt
 
-from vc import settings
-from vc.soldo.client.requesters.utils import decrypt
+T = TypeVar('T')
 
 
 class ResponseInfo(BaseModel):
@@ -22,7 +21,6 @@ class UserBase(ResponseInfo):
     job_title: Optional[str]
     custom_reference_id: Optional[str]
 
-T = TypeVar('T')
 
 class Order(GenericModel, Generic[T]):
 # {
