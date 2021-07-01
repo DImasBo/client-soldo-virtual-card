@@ -31,7 +31,7 @@ class HeadersSoldoBase(BaseModel):
     headers for Standard Authentication
     http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#standard-authentication
     """
-    Authorization2: Optional[str]
+    Authorization: Optional[str]
 
     def __init__(self, *args, **kwargs):
         from vc.client.soldo.client import Soldo
