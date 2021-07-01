@@ -22,6 +22,7 @@ def decrypt(ciphertext: str, ):
             privateKey = serialization.load_pem_private_key(
                 key_file.read(),
                 password=None,
+                backend=default_backend()
             )
 
         # decrypt string
@@ -83,5 +84,5 @@ def fingerprintSignature(fingerprintH):
         logger.exception("Signing failed")
 
 
-def request_timestamp(self):
+def request_timestamp():
     return int(time.time())

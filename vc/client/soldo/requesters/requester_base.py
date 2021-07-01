@@ -31,7 +31,10 @@ class RequesterSoldoBase(object):
             json: dict = None,
             **kwargs):
         from vc.client.soldo.client import Soldo
+        print(path, method, headers, params, data, json)
         r = requests.request(url=Soldo.settings.API_URL + path, method=method, headers=headers, json=json, data=data, params=params, **kwargs)
+        print(r.text)
+        print(r)
         if r.status_code == 401 and "invalid_token" in r.text:
             response_data = self.oauth_authorize()
             Soldo.settings.ACCESS_TOKEN = response_data.data.access_token

@@ -6,6 +6,7 @@ requires = [
     "kombu",
     "pydantic",
     "typing",
+    "psycopg2",
     "requests",
     "pathlib"
 ]

@@ -1,6 +1,6 @@
 from vc.libs.decoratos import response_builder
 from .requester_base import RequesterSoldoBase
-from .schemas import ResponseInfo, UserBase, Order, OrderItem, CardResponse
+from .schemas import ResponseInfo, UserBase, Order, OrderItem, CardResponse, UserResponse
 from .utils import request_timestamp
 
 
@@ -11,20 +11,23 @@ class User(RequesterSoldoBase):
         api_path = f'/business/v2/ping/whoami'
         return self.request(api_path, method='get', headers=self.default_authorize().dict())
 
-    @response_builder(data_schema=UserBase)
+    @response_builder(data_schema=Order[OrderItem])
     def create(self, email: str, name:str, surname: str, custom_reference_id: str, job_title: str, **data):
         # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#add-user
         api_path = f"/business/v2/employees/"
-        data.update(dict(
+
+        user = UserBase(
+                request_timestamp=request_timestamp(),
                 surname=surname,
                 name=name,
                 email=email,
                 custom_reference_id=custom_reference_id,
-                job_title=job_title
-        ))
-        user = UserBase(**data).dict()
-        h= self.advanced_authorize(
-                data, fields=("request_timestamp", "name", "surname", "mobile_access", "web_access"),
+                job_title=job_title,
+                mobile_access=False,
+                web_access=False,
+            **data).dict(exclude_none=True)
+        h = self.advanced_authorize(
+                user, fields=("request_timestamp", "name", "surname", "mobile_access", "web_access"),
             ).dict(by_alias=True)
         return self.request(
             api_path, method='post',

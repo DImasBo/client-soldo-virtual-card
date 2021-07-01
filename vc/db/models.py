@@ -15,10 +15,12 @@ class AccountVC(Base):
     __tablename__ = "vc_account"
     number = Column(String(100))
     balance = Column(Numeric, default=0)
-    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     status = Column(String(15), default=StatusAccountVC.deactivated.value)
+
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", backref="vc_accounts")
-    campaigns = relationship("CampaignC4A", back_populates="account")
+    campaigns = relationship("CampaignVC", back_populates="account")
+
     activated_on = Column(DateTime, index=True)
     created_on = Column(DateTime, default=datetime.now, server_default=func.now(), index=True)
 
@@ -50,7 +52,7 @@ class CampaignVC(Base):
     balance = Column(Numeric, default=0)
     account_id = Column(Integer, ForeignKey("vc_account.id", ondelete="CASCADE"), index=True, nullable=False)
 
-    account = relationship("AccountVC", backref="campaigns")
+    account = relationship("AccountVC", back_populates="campaigns")
 
     type = Column(String, default=CampaignType.facebook.value)
     cards = relationship("CardVC", back_populates="campaign")
@@ -90,8 +92,6 @@ class CardVC(Base):
     system_id = Column(Integer, index=True)
     reference = Column(String, index=True, unique=True, nullable=False)
     is_slave = Column(Boolean, default=False)
-    master_card = relationship("MasterCard", uselist=False ,backref="master_card")
-
     campaign_vc_id = Column(Integer, ForeignKey("vc_campaign.id", ondelete="CASCADE"))
     campaign = relationship("CampaignVC", back_populates="cards")
     balance = Column(Numeric, default=0)

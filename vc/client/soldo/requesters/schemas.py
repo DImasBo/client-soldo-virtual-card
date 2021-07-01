@@ -17,9 +17,14 @@ class ResponseInfo(BaseModel):
 class UserBase(ResponseInfo):
     name: Optional[str]
     email: Optional[str]
+    status: Optional[str]
     surname: Optional[str]
     job_title: Optional[str]
     custom_reference_id: Optional[str]
+
+
+class UserResponse(UserBase):
+    id: Optional[str]
 
 
 class Order(GenericModel, Generic[T]):

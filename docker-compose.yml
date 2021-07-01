@@ -1,0 +1,30 @@
+version: "3.6"
+
+
+services:
+  db:
+    image: postgres:12
+    ports:
+    - 5555:5432
+    environment:
+      - POSTGRES_SERVER=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=changethis
+      - POSTGRES_DB=app
+      - PGDATA=/var/lib/postgresql/data/vc/
+    volumes:
+      - app-db-data:/var/lib/postgresql/data/vc/
+#    volumes:
+#      - app-db-data:/var/lib/postgresql/vcdata
+#
+#  web:
+#    build: .
+#    ports:
+#      - "5000:5000"
+#
+#  redis:
+#    image: "redis:alpine"
+
+
+volumes:
+  app-db-data:

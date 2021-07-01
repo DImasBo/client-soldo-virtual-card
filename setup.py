@@ -1,13 +1,13 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='SoldoCard',
-    version='0.0.1',
+    name='virtual_cards',
+    version='0.0.5',
     url=' ',
     license='MIT',
     author='Dmytro Bondar',
     author_email='admin@affcountry.com',
-    description='A small example package Notifier',
+    description='A small example package Virtual Card',
     long_description='file: README.md',
     packages=find_packages(),
     include_package_data=True,

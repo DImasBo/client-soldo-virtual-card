@@ -1,3 +1,4 @@
+from sqlalchemy.orm import Session
 
 from vc.client.base import BaseNetworkClient
 
@@ -12,7 +13,7 @@ from vc.settings import Settings
 class Soldo(BaseNetworkClient):
 
     settings = Settings({
-        "ACCESS_TOKEN": "fuWnizmwkTIY3NZhDrBeyuZV5CzLtctT",
+        "ACCESS_TOKEN": "xjn0S9iNN7ZMYbS5g3LxnpsN3ltVPgQX",
     })
 
     def __init__(self, name, uri,
@@ -50,8 +51,13 @@ class Soldo(BaseNetworkClient):
         #         data = self.add_item_to_group(settings.GROUP_ID, item.id)
         return response_data
 
-    def create_user(self, email: str, name: str, surname: str, custom_reference_id: str, job_title: str, **data):
-        return user.create(email, name, surname, custom_reference_id, job_title, **data)
+    def create_user(self, db: Session, id: int):
+        u = db.query(self._user).filter(self._user.id==id).first()
+
+        response_model = user.create(u.email, u.first_name, u.last_name, u.id, u.job_title)
+        if not response_model.data.status == "PLACED" or not response_model.data.is_valid:
+            raise ValueError(f"Error create_user {str(response_model.dict())}")
+        return u
 
     def get_card(self, card_id: str, showSensitiveData: str = None):
         return card.get(card_id, showSensitiveData)

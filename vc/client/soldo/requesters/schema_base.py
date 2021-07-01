@@ -58,13 +58,18 @@ class HeadersSoldo(HeadersSoldoBase):
             fields = data.keys()
         fingerprint = ""
         for field in fields:
-            if data.get(field):
-                fingerprint += str(data.get(field))
+            f = data.get(field)
+            if f is not None :
+                if isinstance(f, bool):
+                    f = str(f).lower()
+                else:
+                    f = str(f)
+                fingerprint += f
                 print(fingerprint)
         fingerprint += Soldo.settings.TOKEN
         print(fingerprint)
         self.fingerprintH = fingerprintHash(fingerprint)
-        self.fingerprintS = fingerprintSignature(self.fingerprintH, Soldo.settings.PATH_RSA_PRIVATE)
+        self.fingerprintS = fingerprintSignature(self.fingerprintH)
 
     class Config:
         fields = {
