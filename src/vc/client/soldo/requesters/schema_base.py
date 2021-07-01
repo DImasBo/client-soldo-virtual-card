@@ -10,12 +10,13 @@ T = TypeVar('T')
 
 
 class ResponseData(GenericModel, Generic[T]):
-    error: Optional[str]
-    url: Optional[str]
     status_code: Optional[int]
-    error_description: Optional[str]
-    message: Optional[str]
+    url: Optional[str]
     data: Optional[T]
+    message: Optional[str]
+    error_description: Optional[str]
+    error: Optional[str]
+    error_code: Optional[str]
 
 
 class JWTData(BaseModel):
@@ -30,7 +31,7 @@ class HeadersSoldoBase(BaseModel):
     headers for Standard Authentication
     http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#standard-authentication
     """
-    Authorization: Optional[str]
+    Authorization2: Optional[str]
 
     def __init__(self, *args, **kwargs):
         from vc.client.soldo.client import Soldo
