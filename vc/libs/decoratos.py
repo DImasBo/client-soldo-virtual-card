@@ -1,4 +1,4 @@
-from vc.client.soldo.requesters.schema_base import ResponseData
+from vc.client.schemas_base import ResponseData
 
 
 class ClientException(Exception):

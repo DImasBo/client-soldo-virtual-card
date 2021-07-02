@@ -5,7 +5,7 @@ def init_virtual_card(name:str, service: str,
                       celery_backend: str,
                       user_model,
                       **config):
-    from vc.client.soldo.client import Soldo
+    from vc.manager import Soldo
     required_config = []
     network = None
     if "soldo" == service:

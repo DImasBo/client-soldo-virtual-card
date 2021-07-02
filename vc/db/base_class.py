@@ -39,15 +39,3 @@ class Base:
         res_string += ">"
 
         return res_string
-
-
-class UserBase(Base):
-    __tablename__ = "user"
-    search_id = Column(String)
-    email = Column(String, nullable=False)
-    first_name = Column(String)
-    last_name = Column(String)
-    job_title = Column(String)
-
-    def __repr__(self, input_str=None):
-        return super().__repr__(f"{self.email} {self.id}")

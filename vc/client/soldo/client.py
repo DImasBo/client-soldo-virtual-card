@@ -1,80 +1,125 @@
-from sqlalchemy.orm import Session
-
-from vc.client.base import BaseNetworkClient
-
-
-# from vc.
-from .requesters.client_api import user, wallets, card, group, order
+from vc.libs.decoratos import response_builder
+from .requesters.requester_base import RequesterSoldoBase
+from .requesters.schemas import ResponseInfo, UserBase, Order, OrderItem, CardResponse, UserResponse
+from .requesters.utils import request_timestamp
 
 
-from vc.settings import Settings
+class User(RequesterSoldoBase):
 
-
-class Soldo(BaseNetworkClient):
-
-    settings = Settings({
-        "ACCESS_TOKEN": "xjn0S9iNN7ZMYbS5g3LxnpsN3ltVPgQX",
-    })
-
-    def __init__(self, name, uri,
-                 api_url: str,
-                 client_id: str,
-                 client_secret: str,
-                 group_id: str,
-                 token: str,
-                 filepath_private_pem: str, currency="USD", user_model=None, **config):
-        data = dict(name=name, currency = currency,
-                                     CLIENT_ID=client_id,
-                                     CLIENT_SECRET=client_secret,
-                                     API_URL=api_url,
-                                     TOKEN=token,
-                                     PATH_RSA_PRIVATE=filepath_private_pem,
-                                     GROUP_ID = group_id, **config)
-        Soldo.settings.update_config(**data)
-        super().__init__(uri, user_model=user_model, **config)
-
-    def oauth_authorize(self):
-        return user.oauth_authorize()
-
+    @response_builder(data_schema=ResponseInfo)
     def whoami(self):
-        return user.whoami()
+        api_path = f'/business/v2/ping/whoami'
+        return self.request(api_path, method='get', headers=self.default_authorize().dict())
 
-    def user_update(self, id, **kwargs):
-        return user.update(id, **kwargs)
+    @response_builder(data_schema=Order[OrderItem])
+    def create(self, email: str, name:str, surname: str, custom_reference_id: str, job_title: str, **data):
+        # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#add-user
+        api_path = f"/business/v2/employees/"
 
-    def create_wallet(self,name, owner_type):
-        response_data = wallets.create(owner_type, self.settings.currency, name)
-        order = response_data.data
-        # if order.is_valid and order.status == "PLACED":
-        #     sleep(settings.TIME_SLEEP)
-        #     for item in order.items:
-        #         data = self.add_item_to_group(settings.GROUP_ID, item.id)
-        return response_data
+        user = UserBase(
+                request_timestamp=request_timestamp(),
+                surname=surname,
+                name=name,
+                email=email,
+                custom_reference_id=custom_reference_id,
+                job_title=job_title,
+                mobile_access=False,
+                web_access=False,
+            **data).dict(exclude_none=True)
+        h = self.advanced_authorize(
+                user, fields=("request_timestamp", "name", "surname", "mobile_access", "web_access"),
+            ).dict(by_alias=True)
+        return self.request(
+            api_path, method='post',
+            headers=h,
+            json=user)
 
-    def create_user(self, db: Session, id: int):
-        u = db.query(self._user).filter(self._user.id==id).first()
+    @response_builder(data_schema=UserBase)
+    def update(self, id, **data):
+        # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#update-user-data
+        api_path = f"/business/v2/employees/{id}"
+        return self.request(
+            api_path, method='put',
+            headers=self.advanced_authorize(
+                data, fields=("custom_reference_id", "job_title", "mobile_number", "mobile_prefix",
+                             "email", "enable_mobile_credential", "enable_web_credential"),
+            ).dict(by_alias=True),
+            json=data)
 
-        response_model = user.create(u.email, u.first_name, u.last_name, u.id, u.job_title)
-        if not response_model.data.status == "PLACED" or not response_model.data.is_valid:
-            raise ValueError(f"Error create_user {str(response_model.dict())}")
-        return u
 
-    def get_card(self, card_id: str, showSensitiveData: str = None):
-        return card.get(card_id, showSensitiveData)
+class Wallets(RequesterSoldoBase):
 
-    def create_card(self, owner_type, owner_public_id,
-                    wallet_id, name, emboss_line4=None, type="VIRTUAL", card_label=None):
-        if not card_label:
-            card_label = self.settings.name
+    @response_builder(data_schema=Order[OrderItem])
+    def create(self, owner_type, currency, name):
+        # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#update-user-data
+        # {
+        # "id":"6a5e0887-eaf6-4f49-95cb-6b7f245d04f3",
+        # "status":"PLACED","creation_time":"2021-06-29T10:42:06",
+        # "last_update_time":"2021-06-29T10:42:06","is_valid":true,"total_paid_amount":0.000000,
+        # "total_paid_currency":"EUR",
+        # "items":[{"id":"87d95150-41f3-46a5-9501-ca1b368696ca","itemType":"WALLET","category":"WALLET"}]}
+        api_path = f"/business/v2/wallets/"
+        data = dict( request_timestamp=request_timestamp(), owner_type=owner_type, currency=currency, name=name)
+        h = self.advanced_authorize(
+                data, fields=("request_timestamp", "owner_type", "currency", "name"),
+            ).dict(by_alias=True)
+        return self.request(
+            api_path, method='post',
+            headers=h, json=data)
 
-        return card.create(owner_type=owner_type, owner_public_id=owner_public_id,
-                    wallet_id=wallet_id, name=name,
-            emboss_line4=emboss_line4,
-            type=type,
-            card_label=card_label)
 
-    def add_item_to_group(self, groupId: str, id: str, type="WALLET"):
-        return group.group_write(groupId, id, type)
+class Card(RequesterSoldoBase):
 
-    def get_order(self, order_id: str):
-        return order.get(order_id)
+    @response_builder(data_schema=Order[OrderItem])
+    def create(self, owner_public_id,
+                    wallet_id, owner_type="employee",
+               type="VIRTUAL", name=None,
+               emboss_line4=None, card_label="aff"):
+        # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#update-user-data
+        api_path = f"/business/v2/cards/"
+        data = dict( request_timestamp=request_timestamp(), name=name, emboss_line4=emboss_line4, owner_type=owner_type, owner_public_id= owner_public_id,
+                    wallet_id=wallet_id, type=type, card_label=card_label)
+        h = self.advanced_authorize(
+                data
+                , fields=("request_timestamp", "owner_type", "owner_public_id", "wallet_id"),
+            ).dict(by_alias=True)
+        return self.request(
+            api_path, method='post',
+            headers=h, json=data)
+
+    @response_builder(data_schema=CardResponse)
+    def get(self, card_id: str, showSensitiveData: str = None):
+        api_path = f"/business/v2/cards/{card_id}"
+        return self.request(
+            api_path, method='get',
+            params={"showSensitiveData": showSensitiveData},
+            headers=self.default_authorize().dict())
+
+
+class Order(RequesterSoldoBase):
+
+    @response_builder(data_schema=Order)
+    def get(self, order_id: str):
+        api_path = f"/business/v2/orders/{order_id}"
+        return self.request(
+            api_path, method='get',
+            headers=self.default_authorize().dict())
+
+
+class Group(RequesterSoldoBase):
+
+    # @response_builder(data_schema=UserBase)
+    def group_write(self, groupId: str, id: str, type: str):
+        # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#update-user-data
+        api_path = f"/business/v2/groups/{groupId}/resource"
+        data = dict( id=id, type=type)
+        return self.request(
+            api_path, method='post',
+            headers=self.advanced_authorize(data).dict(by_alias=True), json=data)
+
+
+group = Group()
+user = User()
+wallets = Wallets()
+card = Card()
+order = Order()

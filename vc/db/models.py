@@ -18,8 +18,8 @@ class AccountVC(Base):
     status = Column(String(15), default=StatusAccountVC.deactivated.value)
 
     user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
-    user = relationship("User", backref="vc_accounts")
-    campaigns = relationship("CampaignVC", back_populates="account")
+    # user = relationship("User", backref="vc_accounts")
+    # campaigns = relationship("CampaignVC", back_populates="account")
 
     activated_on = Column(DateTime, index=True)
     created_on = Column(DateTime, default=datetime.now, server_default=func.now(), index=True)
@@ -52,10 +52,10 @@ class CampaignVC(Base):
     balance = Column(Numeric, default=0)
     account_id = Column(Integer, ForeignKey("vc_account.id", ondelete="CASCADE"), index=True, nullable=False)
 
-    account = relationship("AccountVC", back_populates="campaigns")
+    # account = relationship("AccountVC", back_populates="campaigns")
 
     type = Column(String, default=CampaignType.facebook.value)
-    cards = relationship("CardVC", back_populates="campaign")
+    # cards = relationship("CardVC", back_populates="campaign")
 
     @property
     def count_cards(self):
@@ -93,7 +93,7 @@ class CardVC(Base):
     reference = Column(String, index=True, unique=True, nullable=False)
     is_slave = Column(Boolean, default=False)
     campaign_vc_id = Column(Integer, ForeignKey("vc_campaign.id", ondelete="CASCADE"))
-    campaign = relationship("CampaignVC", back_populates="cards")
+    # campaign = relationship("CampaignVC", back_populates="cards")
     balance = Column(Numeric, default=0)
     PAN = Column(String, index=True)
     cvv = Column(String(5))

@@ -1,22 +1,6 @@
-from typing import TypeVar, Optional
-
-from pydantic.generics import GenericModel, Generic
 from .utils import fingerprintHash, fingerprintSignature
 from typing import Optional
 from pydantic import Extra, BaseModel
-
-
-T = TypeVar('T')
-
-
-class ResponseData(GenericModel, Generic[T]):
-    status_code: Optional[int]
-    url: Optional[str]
-    data: Optional[T]
-    message: Optional[str]
-    error_description: Optional[str]
-    error: Optional[str]
-    error_code: Optional[str]
 
 
 class JWTData(BaseModel):
@@ -34,7 +18,7 @@ class HeadersSoldoBase(BaseModel):
     Authorization: Optional[str]
 
     def __init__(self, *args, **kwargs):
-        from vc.client.soldo.client import Soldo
+        from vc.manager import Soldo
         super().__init__(*args, **kwargs)
         self.Authorization = f"Bearer {Soldo.settings.ACCESS_TOKEN}"
 
@@ -52,7 +36,7 @@ class HeadersSoldo(HeadersSoldoBase):
     fingerprintS: Optional[str]
 
     def __init__(self, data, fields=None, **kwargs):
-        from vc.client.soldo.client import Soldo
+        from vc.manager import Soldo
         super().__init__(**kwargs)
         if not fields:
             fields = data.keys()

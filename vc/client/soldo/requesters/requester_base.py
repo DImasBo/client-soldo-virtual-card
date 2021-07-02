@@ -3,10 +3,11 @@ import requests
 
 from vc.libs.decoratos import response_builder
 from .schema_base import HeadersSoldoBase, HeadersSoldo, JWTData
+from vc.libs.utils import set_config
 
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+set_config(logger, filename="vc_log_soldo.log")
 
 
 class RequesterSoldoBase(object):
@@ -16,7 +17,7 @@ class RequesterSoldoBase(object):
 
     @response_builder(data_schema=JWTData)
     def oauth_authorize(self):
-        from vc.client.soldo.client import Soldo
+        from vc.manager import Soldo
         api_path = f'/oauth/authorize'
         response_data = self.request(
             api_path, method='post',
@@ -30,15 +31,15 @@ class RequesterSoldoBase(object):
             params: str = None, data: dict = None,
             json: dict = None,
             **kwargs):
-        from vc.client.soldo.client import Soldo
-        print(path, method, headers, params, data, json)
+        from vc.manager import Soldo
         r = requests.request(url=Soldo.settings.API_URL + path, method=method, headers=headers, json=json, data=data, params=params, **kwargs)
-        print(r.text)
-        print(r)
+        logger.debug(f"request: {r.request.url}, b: {str(r.request.body)} h: {str(r.request.headers)}")
+        logger.debug(f"response: {r.text}, b:  h: {r.headers}")
         if r.status_code == 401 and "invalid_token" in r.text:
             response_data = self.oauth_authorize()
             Soldo.settings.ACCESS_TOKEN = response_data.data.access_token
-            return self.request(path, method,  headers=self.default_authorize().dict(),
+            headers["Authorization"] = Soldo.settings.ACCESS_TOKEN
+            return self.request(path, method,  headers=headers,
                                 params=params, data=data, json=json)
 
         data = r.text
