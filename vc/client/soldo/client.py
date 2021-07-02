@@ -1,6 +1,7 @@
 from vc.libs.decoratos import response_builder
 from .requesters.requester_base import RequesterSoldoBase
-from .requesters.schemas import ResponseInfo, UserBase, Order, OrderItem, CardResponse, UserResponse
+from .requesters.schemas import ResponseInfo, UserBase, Order, OrderItem, CardResponse, UserResponse, PaginateList, \
+    WalletBase
 from .requesters.utils import request_timestamp
 
 
@@ -48,6 +49,19 @@ class User(RequesterSoldoBase):
 
 
 class Wallets(RequesterSoldoBase):
+
+    @response_builder(data_schema=PaginateList[WalletBase])
+    def search(self, page=1, page_size=50, **data):
+        data.update(dict(
+            s=page_size,
+            p=page,
+        ))
+        return self.request(
+            "/business/v2/wallets",
+            params=data,
+            headers=self.default_authorize().dict()
+        )
+
 
     @response_builder(data_schema=Order[OrderItem])
     def create(self, owner_type, currency, name):

@@ -74,3 +74,17 @@ class CardResponse(ResponseInfo):
         if not values.get("pan"):
             values["pan"] = values.get("masked_pan")
         return values
+
+
+class PaginateList(GenericModel, Generic[T]):
+    results: List[T]
+    current_page: int
+    page_size: int
+    results_size: int
+    total: int
+
+
+class WalletBase(ResponseInfo):
+    id: Optional[str]
+    name: Optional[str]
+    primary_user_public_id: Optional[str]

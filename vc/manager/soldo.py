@@ -29,7 +29,7 @@ class SoldoException(Exception):
 
 class Soldo(EventMixer, BaseNetworkClient):
     settings = Settings({
-        "ACCESS_TOKEN": "oTs23lULDGnbQfYsJ8rufEChqYCsMpNT",
+        "ACCESS_TOKEN": "9xD6LYeAF0ddKRcuChVBQyTtLy04QpIm",
     })
     event_list = ["new_user", "wallet_created"]
 
@@ -59,6 +59,11 @@ class Soldo(EventMixer, BaseNetworkClient):
 
     def user_update(self, id, **kwargs):
         return user.update(id, **kwargs)
+
+    def get_wallets(self,  **kwargs):
+        response_data = wallets.search(**kwargs)
+        print(response_data)
+        return response_data
 
     def create_wallet(self, db: Session, id: int, name: str = None, owner_type="company"):
         wallet = db.query(WalletSo).filter(WalletSo.id == id).first()
@@ -97,9 +102,9 @@ class Soldo(EventMixer, BaseNetworkClient):
 
         if not name:
             name = user.email
-        print(user.search_id)
+        print(user.soldo_id)
         print(wallet.search_id)
-        response_data = card.create(owner_public_id=user.search_id,
+        response_data = card.create(owner_public_id=user.soldo_id,
             wallet_id=wallet.search_id,
             name=name,
             emboss_line4=emboss_line4,

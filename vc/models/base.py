@@ -10,12 +10,12 @@ from vc.db.models import StatusCard
 
 class UserBase(Base):
     __tablename__ = "user"
-    search_id = Column(String)
+    soldo_id = Column(String(100))
     email = Column(String, nullable=False)
     first_name = Column(String)
     last_name = Column(String)
     job_title = Column(String)
-    wallet_soldo = relationship("WalletSo", back_populates="user", uselist=False)
+    wallet_soldo = relationship("WalletSo", back_populates="user")
 
     def __repr__(self, input_str=None):
         return super().__repr__(f"{self.email} {self.id}")
@@ -55,7 +55,8 @@ class DateFixedMixin:
 class WalletBase:
     search_id = Column(String)
     status = Column(String(15), default=WalletStatus.deactivated.value)
-    balance = Column(Numeric, nullable=False, default=0)\
+    balance = Column(Numeric, nullable=False, default=0)
+    currency = Column(String(10), default="USD")
 
     @declared_attr
     def user_id(cls):
