@@ -23,17 +23,25 @@ class EventMixer:
         wallets = list(filter(
             lambda w: w.primary_user_public_id == user.soldo_id,
             wallets))
-        print(wallets)
+
+        list_wallet_id = [w.search_id for w in user.wallet_soldo]
+
+        wallets = list(filter(
+            lambda w: w.id not in list_wallet_id,
+            wallets
+        ))
+
         for w in wallets:
-            wallet = WalletSo(
-                user_id=user.id,
-                search_id=w.id,
-                balance=w.available_amount,
-                blocked_balance=w.blocked_amount,
-                currency=w.currency_code)
-            if data.get("creation_time"):
-                wallet.created_on = datetime.strptime(data.get("creation_time"), self.format_date)
-            self.save_obj(db, wallet)
+            if w.currency_code in self.settings.currency:
+                wallet = WalletSo(
+                    user_id=user.id,
+                    search_id=w.id,
+                    balance=w.available_amount,
+                    blocked_balance=w.blocked_amount,
+                    currency=w.currency_code)
+                if data.get("creation_time"):
+                    wallet.created_on = datetime.strptime(data.get("creation_time"), self.format_date)
+                self.save_obj(db, wallet)
         return user
 
     def wallet_created(self, db: Session, **data):

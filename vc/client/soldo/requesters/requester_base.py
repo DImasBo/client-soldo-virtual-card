@@ -7,13 +7,16 @@ from vc.libs.utils import set_config
 
 
 logger = logging.getLogger(__name__)
-set_config(logger, filename="vc_log_soldo.log")
+# set_config(logger, filename=None)
 
 
 class RequesterSoldoBase(object):
     default_authorize = HeadersSoldoBase
     advanced_authorize = HeadersSoldo
     auth2_data: JWTData
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @response_builder(data_schema=JWTData)
     def oauth_authorize(self):
