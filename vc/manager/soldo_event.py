@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from vc.models.soldo import WalletSo
+from vc.models.soldo import WalletSo, CardSo
 
 
 class EventMixer:
@@ -64,3 +64,18 @@ class EventMixer:
         if not data.get("groups"):
             self.add_item_to_group(wallet.search_id)
         return wallet
+
+    def store_order_completed(self, db, **data):
+        order = self.get_cache(data.get("id"))
+        for i in data.get("items"):
+            if i.get("category") == "CARD":
+                print(i)
+                print(order)
+                card = CardSo(search_id=i.get("id"), wallet_id=order.get("wallet_id"))
+                self.save_obj(db, card)
+
+                card = self.update_info_card(db, card.id)
+                print(card)
+                print(card.__dict__)
+                self.add_item_to_group(card.search_id, type="CARD")
+

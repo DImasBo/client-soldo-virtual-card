@@ -58,6 +58,7 @@ class CardResponse(ResponseInfo):
     expiration_date: datetime
     creation_time: datetime
     wallet_id: Optional[str]
+    type: Optional[str]
     owner_type: str
     owner_public_id: str
     masked_pan: str

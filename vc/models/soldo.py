@@ -1,8 +1,21 @@
 from sqlalchemy import Column, Numeric, String, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 
-from .base import CardBase, WalletBase, DateFixedMixin, CardType
+from .base import CardBase, WalletBase, DateFixedMixin, CardType, CardStatus
 from vc.db.base_class import Base
+
+
+class SoldoStatusToSystem(str.__class__):
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v) -> bool:
+        if isinstance(v, str):
+            if v == "Normal":
+                return CardStatus.active.value
+        return CardStatus.pending.value
 
 
 class WalletSo(WalletBase, DateFixedMixin, Base):
