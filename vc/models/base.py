@@ -2,7 +2,9 @@ from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import DateTime, Column, func, Numeric, Integer, ForeignKey, String, Date
-from sqlalchemy.orm import relationship, declared_attr
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declared_attr
+
 
 from vc.db.base_class import Base
 from vc.db.models import StatusCard
@@ -15,7 +17,6 @@ class UserBase(Base):
     first_name = Column(String)
     last_name = Column(String)
     job_title = Column(String)
-    wallet_soldo = relationship("WalletSo", back_populates="user")
 
     def __repr__(self, input_str=None):
         return super().__repr__(f"{self.email} {self.id}")
@@ -60,7 +61,9 @@ class WalletBase:
 
     @declared_attr
     def user_id(cls):
-        return Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+        return Column(Integer,
+                      #ForeignKey("user.id", ondelete="CASCADE"),
+                      nullable=False)
 
 
 class CardBase:

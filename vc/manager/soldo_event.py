@@ -14,22 +14,20 @@ class EventMixer:
         user = db.query(self._user).filter(self._user.email == data.get("email")).first()
         user.soldo_id = data.get("id")
         self.save_obj(db, user)
-
+        print(data)
         if not data.get("groups"):
             self.add_item_to_group(user.soldo_id, type="USER")
-
-        response_data = self.get_wallets(page_size=100)
+            print("setgroup")
+        response_data = self.get_wallets(type="employee", publicId=user.soldo_id)
         wallets = response_data.data.results
-        wallets = list(filter(
-            lambda w: w.primary_user_public_id == user.soldo_id,
-            wallets))
-
-        list_wallet_id = [w.search_id for w in user.wallet_soldo]
-
+        print(wallets)
+        list_wallet_id = [w.search_id for w in db.query(WalletSo).filter(WalletSo.user_id == user.id).all()]
+        print(list_wallet_id)
         wallets = list(filter(
             lambda w: w.id not in list_wallet_id,
             wallets
         ))
+        print(wallets)
 
         for w in wallets:
             if w.currency_code in self.settings.currency:
@@ -78,4 +76,4 @@ class EventMixer:
                 print(card)
                 print(card.__dict__)
                 self.add_item_to_group(card.search_id, type="CARD")
-
+                self.wallet_update_balance(db, card.wallet_id)

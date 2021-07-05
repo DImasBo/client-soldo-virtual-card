@@ -89,3 +89,5 @@ class WalletBase(ResponseInfo):
     id: Optional[str]
     name: Optional[str]
     primary_user_public_id: Optional[str]
+    available_amount: Optional[Decimal]
+    blocked_amount: Optional[Decimal]

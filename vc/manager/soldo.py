@@ -71,21 +71,30 @@ class Soldo(EventMixer, BaseNetworkClient):
         print(response_data)
         return response_data
 
+    def wallet_update_balance(self, db: Session, wallet_id: int):
+        wallet = db.query(WalletSo).filter(WalletSo.id == wallet_id).first()
+        response_data = wallets.get(wallet.search_id)
+        wallet.balance = response_data.data.balance
+        self.save_obj(db, wallet)
+        return wallet
+
     def create_wallet(self, db: Session, id: int, name: str = None, owner_type="company"):
         wallet = db.query(WalletSo).filter(WalletSo.id == id).first()
         if not name:
             name = wallet.user.email
 
-        response_data = wallets.create(owner_type, self.settings.currency, name)
-        order = response_data.data
-        if not order.is_valid or order.status != "PLACED":
-            raise SoldoException("Error create_wallet", response_data.dict())
+        list_wallet = []
+        for currency in self.settings.currency:
+            response_data = wallets.create(owner_type, currency, name)
+            order = response_data.data
+            if not order.is_valid or order.status != "PLACED":
+                raise SoldoException("Error create_wallet", response_data.dict())
 
-        if order.items:
-            wallet.search_id = order.items[0].id
-            self.save_obj(db, wallet)
-
-        return wallet
+            if order.items:
+                wallet.search_id = order.items[0].id
+                self.save_obj(db, wallet)
+            list_wallet.append(wallet)
+        return list_wallet
 
     def create_user(self, db: Session, id: int):
         u = db.query(self._user).filter(self._user.id == id).first()
@@ -112,16 +121,20 @@ class Soldo(EventMixer, BaseNetworkClient):
         self.save_obj(db, card_obj)
         return card_obj
 
-    def create_card(self, db: Session, user_id: int,
+    def create_card(self, db: Session, wallet_id: int,
                     name: str = None, emboss_line4: str = None, type="VIRTUAL", card_label=None):
-        wallet = db.query(WalletSo).filter(WalletSo.user_id == user_id).first()
-        user = wallet.user
+        """
+
+        type : (VIRTUAL, GOOGLE_CARD)
+        """
+        wallet = db.query(WalletSo).filter(WalletSo.id == wallet_id).first()
+        user = db.query(self._user).filter(self._user.id==wallet.user_id).first()
 
         if not card_label:
             card_label = self.settings.name
 
         if not name:
-            name = user.email
+            name = f"aff {user.email}"
         print(user.soldo_id)
         print(wallet.search_id)
         response_data = card.create(owner_public_id=user.soldo_id,
@@ -134,12 +147,12 @@ class Soldo(EventMixer, BaseNetworkClient):
 
         if not order.is_valid or order.status != "PLACED":
             raise SoldoException("Error create_card", response_data.dict())
-        self.__cache_order[order.id] = {
+        self.__cache[order.id] = {
             "wallet_id": wallet.id,
             "status": order.status,
             "category": "CARD"
         }
-        print(self.__cache_order)
+        print(self.__cache)
         # card_so = CardSo(search_id=order.id, wallet_id=wallet.id)
 
         # self.save_obj(db, card_so)

@@ -50,8 +50,15 @@ class User(RequesterSoldoBase):
 
 class Wallets(RequesterSoldoBase):
 
+    @response_builder(data_schema=WalletBase)
+    def get(self, wallet_id: str ):
+        return self.request(
+            f"/business/v2/wallets/{wallet_id}",
+            headers=self.default_authorize().dict()
+        )
+
     @response_builder(data_schema=PaginateList[WalletBase])
-    def search(self, page=1, page_size=50, **data):
+    def search(self, page=0, page_size=50, **data):
         data.update(dict(
             s=page_size,
             p=page,
@@ -61,7 +68,6 @@ class Wallets(RequesterSoldoBase):
             params=data,
             headers=self.default_authorize().dict()
         )
-
 
     @response_builder(data_schema=Order[OrderItem])
     def create(self, owner_type, currency, name):
