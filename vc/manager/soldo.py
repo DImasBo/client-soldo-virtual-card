@@ -8,7 +8,7 @@ from .base import BaseNetworkClient
 
 # from vc.
 from vc.client.soldo import user, wallets, card, group, order
-from vc.models.soldo import WalletSo, CardSo, SoldoStatusToSystem
+from vc.models.soldo import WalletSo, CardSo
 from vc.settings import Settings
 from .soldo_event import EventMixer
 from vc.libs.utils import set_config
@@ -76,6 +76,38 @@ class Soldo(EventMixer, BaseNetworkClient):
         self.save_obj(db, wallet)
         return wallet
 
+    def upload_cards(self, db: Session):
+        response_cards = card.search(page_size=1000500, type="company").data.results
+        query_cards = db.query(CardSo).filter(CardSo.search_id is not None).all()
+
+        list_model_id = []
+        list_model = []
+        for w in query_cards:
+            list_model_id.append(w.search_id)
+            list_model.append({"search_id": w.search_id, "id": w.id})
+
+        filter_model = list(filter(
+            lambda w: w.id in list_model_id,
+            response_cards
+        ))
+
+        update_card = []
+        for model in filter_model:
+            response_wallet = list(filter(
+                lambda w: w.get("search_id") == model.id,
+                list_model
+            ))
+            if response_wallet:
+                update_card.append({
+                    "id": response_wallet[0].get("id"),
+                    "status": model.status,
+                    "label": model.label
+                })
+
+        db.bulk_update_mappings(CardSo, update_card)
+        db.commit()
+        return update_card
+
     def upload_wallets(self, db: Session):
         response_wallets = wallets.search(page_size=1000500, type="company").data.results
         query_wallets = db.query(WalletSo).filter(WalletSo.search_id is not None).all()
@@ -133,7 +165,7 @@ class Soldo(EventMixer, BaseNetworkClient):
         card_obj.created_on = response_card.creation_time
         card_obj.expiry = response_card.expiration_date.date()
         card_obj.PAN = response_card.pan
-        card_obj.status = SoldoStatusToSystem.validate(response_card.status)
+        card_obj.status = response_card.status
         self.save_obj(db, card_obj)
         return card_obj
 

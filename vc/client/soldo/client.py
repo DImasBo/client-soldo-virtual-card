@@ -115,6 +115,17 @@ class Card(RequesterSoldoBase):
             params={"showSensitiveData": showSensitiveData},
             headers=self.default_authorize().dict())
 
+    @response_builder(data_schema=PaginateList[CardResponse])
+    def search(self, page=0, page_size=50, **data):
+        data.update(dict(
+            s=page_size,
+            p=page,
+        ))
+        return self.request(
+            "/business/v2/cards",
+            params=data,
+            headers=self.default_authorize().dict()
+        )
 
 class Order(RequesterSoldoBase):
 

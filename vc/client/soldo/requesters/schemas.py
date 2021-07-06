@@ -52,7 +52,8 @@ class OrderItem(ResponseInfo):
 
 class CardResponse(ResponseInfo):
     id: str
-    name: str
+    label: Optional[str]
+    name: Optional[str]
     status: str
     sensitive_data: Optional[Dict]
     expiration_date: datetime
@@ -60,7 +61,7 @@ class CardResponse(ResponseInfo):
     wallet_id: Optional[str]
     type: Optional[str]
     owner_type: str
-    owner_public_id: str
+    owner_public_id: Optional[str]
     masked_pan: str
     pan: Optional[str] = None
     cvv: Optional[str] = None
