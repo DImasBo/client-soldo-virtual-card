@@ -5,7 +5,7 @@ services:
   db:
     image: postgres:12
     ports:
-    - 5555:5432
+    - 5551:5432
     environment:
       - POSTGRES_SERVER=db
       - POSTGRES_USER=postgres

@@ -1,16 +1,21 @@
 from enum import Enum
 
 from sqlalchemy import Column, Numeric, String, ForeignKey, Integer
+from sqlalchemy.ext.declarative import as_declarative
 from sqlalchemy.orm import relationship
 
 from .base import CardBase, WalletBase, DateFixedMixin, CardType, CardStatus
-from vc.db.base_class import Base
+from vc.db.base_class import BaseMixer
 
 
-class WalletSo(WalletBase, DateFixedMixin, Base):
+@as_declarative()
+class SoldoBase(BaseMixer):
+    pass
+
+
+class WalletSo(WalletBase, DateFixedMixin, SoldoBase):
     __tablename__ = "soldo_wallet"
     blocked_balance = Column(Numeric, default=0)
-    user = relationship("UserBase", back_populates="wallet_soldo")
 
 
 class CardStatus(str, Enum):
@@ -26,7 +31,7 @@ class CardStatus(str, Enum):
     pending = "pending"
 
 
-class CardSo(CardBase, DateFixedMixin, Base):
+class CardSo(CardBase, DateFixedMixin, SoldoBase):
     __tablename__ = "soldo_card"
     label = Column(String)
     wallet_id = Column(Integer, ForeignKey("soldo_wallet.id", ondelete="CASCADE"))

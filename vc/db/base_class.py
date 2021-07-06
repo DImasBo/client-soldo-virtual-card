@@ -2,8 +2,7 @@ from sqlalchemy.ext.declarative import as_declarative, declared_attr
 from sqlalchemy import Column, Integer, String
 
 
-@as_declarative()
-class Base:
+class BaseMixer:
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     __name__: str
 
@@ -39,3 +38,8 @@ class Base:
         res_string += ">"
 
         return res_string
+
+
+@as_declarative()
+class Base(BaseMixer):
+    pass
