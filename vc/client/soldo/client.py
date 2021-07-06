@@ -148,8 +148,25 @@ class Group(RequesterSoldoBase):
             headers=self.advanced_authorize(data).dict(by_alias=True), json=data)
 
 
+class Transaction(RequesterSoldoBase):
+
+    @response_builder(data_schema=PaginateList[ResponseInfo])
+    def search(self, **params):
+        # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#update-user-data
+        data = dict(id=id, type=type)
+        return self.request(
+            f"/business/v2/transactions", method='get',
+            params=params,
+            headers=self.advanced_authorize(
+                params,
+                fields=("type", "publicId", "customReferenceId", "groupId", "fromDate", "toDate", "dateType", "category", "status", "tagId", "metadataId", "text")
+            ).dict(by_alias=True))
+
+
+
 group = Group()
 user = User()
 wallets = Wallets()
 card = Card()
 order = Order()
+transaction = Transaction()

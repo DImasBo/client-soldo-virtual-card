@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from .base import BaseNetworkClient
 
 # from vc.
-from vc.client.soldo import user, wallets, card, group, order
+from vc.client.soldo import user, wallets, card, group, order, transaction
 from vc.models.soldo import WalletSo, CardSo
 from vc.settings import Settings
 from .soldo_event import EventMixer
@@ -29,7 +29,7 @@ class SoldoException(Exception):
 
 class Soldo(EventMixer, BaseNetworkClient):
     settings = Settings({
-        "ACCESS_TOKEN": "T9Yudxf8ZixZ4Gl5mGlzbdJg8GT6zdcJ",
+        "ACCESS_TOKEN": "ArKNudyjPu7HgWj6V8QiaBfBS8xPlsSG",
     })
     event_list = ["new_user", "wallet_created", "store_order_completed"]
     __cache = {'c274b136-5999-4626-850c-46f5db5e5473':
@@ -75,6 +75,16 @@ class Soldo(EventMixer, BaseNetworkClient):
 
         self.save_obj(db, wallet)
         return wallet
+
+    def get_transactions_by_wallet_id(self, wallet_id, type="wallet", **kwargs):
+        wallet_q = db.query(WalletSo).filter(WalletSo.id == wallet_id).first()
+        response_data = transaction.search(type=type, publicId=wallet_q.search_id, **kwargs).data
+        return response_data
+
+    def get_statements_by_card_id(self, db: Session, card_id, page=0, **kwargs):
+        card_q = db.query(CardSo).filter(CardSo.id==card_id).first()
+        response_data = transaction.search(type="card", publicId=card_q.search_id,**kwargs).data
+        return response_data
 
     def upload_cards(self, db: Session):
         response_cards = card.search(page_size=1000500, type="company").data.results
