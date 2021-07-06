@@ -63,7 +63,7 @@ class BaseNetworkClient(object):
     def user_update(self, db: Session, id: int, **kwargs):
         raise NotImplementedError
 
-    def create_user(self, db: Session, id: int):
+    def activate_service(self, db: Session, user_id: int, **kwargs):
         raise NotImplementedError
 
     def create_wallet(self, db: Session,id: int):

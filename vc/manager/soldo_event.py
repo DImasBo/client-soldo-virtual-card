@@ -48,15 +48,12 @@ class EventMixer:
         """2021-07-02 12:56:37,564 - app.api.api_v1.endpoints.utils - DEBUG - b'{"event_type":"Wallet","event_name":"wallet_created",
         "data":
         {"id":"f0dd3007-838b-46e9-899c-3c526c71ee06","name":"test@test.com","currency_code":"USD","available_amount":0.00,"blocked_amount":0.00,"primary_user_type":"company","visible":true,"creation_time":"2021-07-02T09:56:37Z"}}'"""
-        user = db.query(self._user).filter(self._user.soldo_id == data.get("primary_user_public_id")).first()
+        wallet = db.query(WalletSo).filter(WalletSo.search_id == data.get("id")).first()
 
-        wallet = WalletSo(
-            user_id=user.id,
-            search_id=data.get("id"),
-            balance=data.get("available_amount"),
-            blocked_balance=data.get("blocked_amount"),
-            currency=data.get("blocked_amount"),
-        )
+        wallet.balance=data.get("available_amount"),
+        wallet.blocked_balance=data.get("blocked_amount"),
+        wallet.currency=data.get("currency_code")
+
         if data.get("creation_time"):
             wallet.created_on = datetime.strptime(data.get("creation_time"), self.format_date)
         self.save_obj(db, wallet)
@@ -68,7 +65,8 @@ class EventMixer:
     def store_order_completed(self, db, **data):
         order = self.get_cache(data.get("id"))
         for i in data.get("items"):
-            if i.get("category") == "CARD":
+            category = i.get("category")
+            if category == "CARD":
                 print(i)
                 print(order)
                 card = CardSo(search_id=i.get("id"), wallet_id=order.get("wallet_id"))
@@ -78,4 +76,4 @@ class EventMixer:
                 print(card)
                 print(card.__dict__)
                 self.add_item_to_group(card.search_id, type="CARD")
-
+                self.wallet_update_balance(db, card.wallet_id)

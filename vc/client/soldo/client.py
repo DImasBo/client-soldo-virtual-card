@@ -50,8 +50,15 @@ class User(RequesterSoldoBase):
 
 class Wallets(RequesterSoldoBase):
 
+    @response_builder(data_schema=WalletBase)
+    def get(self, wallet_id: str):
+        return self.request(
+            f"/business/v2/wallets/{wallet_id}",
+            method='get',
+            headers=self.default_authorize().dict())
+
     @response_builder(data_schema=PaginateList[WalletBase])
-    def search(self, page=1, page_size=50, **data):
+    def search(self, page=0, page_size=50, **data):
         data.update(dict(
             s=page_size,
             p=page,
@@ -64,7 +71,7 @@ class Wallets(RequesterSoldoBase):
 
 
     @response_builder(data_schema=Order[OrderItem])
-    def create(self, owner_type, currency, name):
+    def create(self, owner_type, currency, name, **kwargs):
         # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#update-user-data
         # {
         # "id":"6a5e0887-eaf6-4f49-95cb-6b7f245d04f3",
@@ -73,7 +80,7 @@ class Wallets(RequesterSoldoBase):
         # "total_paid_currency":"EUR",
         # "items":[{"id":"87d95150-41f3-46a5-9501-ca1b368696ca","itemType":"WALLET","category":"WALLET"}]}
         api_path = f"/business/v2/wallets/"
-        data = dict( request_timestamp=request_timestamp(), owner_type=owner_type, currency=currency, name=name)
+        data = dict(request_timestamp=request_timestamp(), owner_type=owner_type, currency=currency, name=name, **kwargs)
         h = self.advanced_authorize(
                 data, fields=("request_timestamp", "owner_type", "currency", "name"),
             ).dict(by_alias=True)
@@ -85,13 +92,12 @@ class Wallets(RequesterSoldoBase):
 class Card(RequesterSoldoBase):
 
     @response_builder(data_schema=Order[OrderItem])
-    def create(self, owner_public_id,
-                    wallet_id, owner_type="employee",
+    def create(self, wallet_id, owner_public_id: str = None, owner_type="company",
                type="VIRTUAL", name=None,
                emboss_line4=None, card_label="aff"):
         # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#update-user-data
         api_path = f"/business/v2/cards/"
-        data = dict( request_timestamp=request_timestamp(), name=name, emboss_line4=emboss_line4, owner_type=owner_type, owner_public_id= owner_public_id,
+        data = dict(request_timestamp=request_timestamp(), name=name, emboss_line4=emboss_line4, owner_type=owner_type, owner_public_id=owner_public_id,
                     wallet_id=wallet_id, type=type, card_label=card_label)
         h = self.advanced_authorize(
                 data
@@ -125,10 +131,9 @@ class Group(RequesterSoldoBase):
     # @response_builder(data_schema=UserBase)
     def group_write(self, groupId: str, id: str, type: str):
         # http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#update-user-data
-        api_path = f"/business/v2/groups/{groupId}/resource"
-        data = dict( id=id, type=type)
+        data = dict(id=id, type=type)
         return self.request(
-            api_path, method='post',
+            f"/business/v2/groups/{groupId}/resource", method='post',
             headers=self.advanced_authorize(data).dict(by_alias=True), json=data)
 
 
