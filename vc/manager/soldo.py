@@ -12,14 +12,15 @@ from vc.models.soldo import WalletSo, CardSo
 from vc.settings import Settings
 from .soldo_event import EventMixer
 from vc.libs.utils import set_config
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
-set_config(logger, filename="soldo2.log")
+# set_config(logger, filename="soldo2.log")
 
 
 class SoldoException(Exception):
 
-    def __init__(self, msg: str, response_data: dict):
+    def __init__(self, msg: str, response_data: dict = None):
         self.msg = msg
         self.response_data = response_data
 
@@ -29,15 +30,25 @@ class SoldoException(Exception):
 
 class Soldo(EventMixer, BaseNetworkClient):
     settings = Settings({
-        "ACCESS_TOKEN": "ArKNudyjPu7HgWj6V8QiaBfBS8xPlsSG",
+        "ACCESS_TOKEN": "c4R6RI7XHwTXHYCVUhx53mdCEICXWlEP",
     })
     event_list = ["new_user", "wallet_created", "store_order_completed"]
     __cache = {'c274b136-5999-4626-850c-46f5db5e5473':
                    {"id": "1d4df4f9-0c89-4913-8d68-8e6c9d19c611", 'wallet_id': 1, 'status': 'PLACED',
                     "category": "CARD"}, }
 
-    def get_cache(self, key: str):
+    def get_cache(self):
+        return self.__cache
+
+    def get_cache_by_key(self, key):
         return self.__cache.get(key)
+
+    def update_cache(self, **data: dict):
+        return self.__cache.update(data)
+
+    def remove_cache(self, key):
+        if self.__cache.get(key):
+            return self.__cache.pop(key)
 
     def __init__(self, name, uri,
                  api_url: str,
@@ -54,6 +65,8 @@ class Soldo(EventMixer, BaseNetworkClient):
                     TOKEN=token,
                     WALLET_SAFE=wallet_safe,
                     USER_MODEL=user_model,
+                    UPLOAD_SIZE=1000500,
+                    RULES=["OpenClose", "MaxPerTx"],
                     LOG_FILE=log_file,
                     PATH_RSA_PRIVATE=filepath_private_pem,
                     GROUP_ID=group_id, **config)
@@ -76,57 +89,98 @@ class Soldo(EventMixer, BaseNetworkClient):
         self.save_obj(db, wallet)
         return wallet
 
-    def get_transactions_by_wallet_id(self, wallet_id, type="wallet", **kwargs):
+    def get_transactions_by_wallet_id(self, db: Session, wallet_id, type="wallet", page=0,  **kwargs):
         wallet_q = db.query(WalletSo).filter(WalletSo.id == wallet_id).first()
-        response_data = transaction.search(type=type, publicId=wallet_q.search_id, **kwargs).data
+        response_data = transaction.search(type=type, publicId=wallet_q.search_id, page=page, **kwargs).data
         return response_data
 
     def get_statements_by_card_id(self, db: Session, card_id, page=0, **kwargs):
         card_q = db.query(CardSo).filter(CardSo.id==card_id).first()
-        response_data = transaction.search(type="card", publicId=card_q.search_id,**kwargs).data
+        response_data = transaction.search(type="card", publicId=card_q.search_id, page=page, **kwargs).data
         return response_data
 
+    def update_card_rule(self, db: Session, card_id: int, name: str, enabled: bool, amount: Decimal = None):
+        card_q = db.query(CardSo).filter(CardSo.id==card_id).first()
+        if name not in self.settings.RULES:
+            raise SoldoException("Exception rule. name rule not enable or not exists")
+        rules = card.update_card_rule(card_q.search_id, name=name, enabled=enabled, amount=amount).data
+        return rules
+
+    def get_card_rules(self, db: Session, card_id: int):
+        card_q = db.query(CardSo).filter(CardSo.id == card_id).first()
+        return card.get_card_rules(card_q.search_id).data
+
     def upload_cards(self, db: Session):
-        response_cards = card.search(page_size=1000500, type="company").data.results
+        response_cards = card.search(page_size=self.settings.UPLOAD_SIZE).data.results
+        query_wallets = db.query(WalletSo).filter(WalletSo.search_id is not None).all()
         query_cards = db.query(CardSo).filter(CardSo.search_id is not None).all()
 
         list_model_id = []
-        list_model = []
+        list_model = {}
         for w in query_cards:
             list_model_id.append(w.search_id)
-            list_model.append({"search_id": w.search_id, "id": w.id})
+            list_model[w.search_id] = w.id
+
+        list_wallets_id = []
+        list_wallets = {}
+        for w in query_wallets:
+            list_wallets_id.append(w.search_id)
+            list_wallets[w.search_id] = w.id
 
         filter_model = list(filter(
-            lambda w: w.id in list_model_id,
+            lambda w: w.wallet_id in list_wallets_id,
             response_cards
         ))
 
-        update_card = []
+        update_cards = []
+        create_cards_id = []
         for model in filter_model:
-            response_wallet = list(filter(
-                lambda w: w.get("search_id") == model.id,
-                list_model
-            ))
-            if response_wallet:
-                update_card.append({
-                    "id": response_wallet[0].get("id"),
+            card_id = list_model.get(model.id)
+            if card_id:
+                update_cards.append({
+                    "id": card_id,
                     "status": model.status,
                     "label": model.label
                 })
+            else:
+                create_cards_id.append(model.id)
 
-        db.bulk_update_mappings(CardSo, update_card)
+        create_cards = []
+        for card_id in create_cards_id:
+            print(card_id)
+            response_card = card.get(card_id, True).data
+            wallet_id = list_wallets.get(response_card.wallet_id)
+            if wallet_id:
+                print(response_card)
+                card_obj = CardSo(wallet_id=wallet_id, search_id=response_card.id)
+                card_obj.PAN = response_card.pan
+                card_obj.cvv = response_card.cvv
+                card_obj.name = response_card.name
+                card_obj.type = response_card.type
+                card_obj.created_on = response_card.creation_time
+                card_obj.expiry = response_card.expiration_date.date()
+                card_obj.PAN = response_card.pan
+                card_obj.status = response_card.status
+                create_cards.append(card_obj)
+
+        db.bulk_update_mappings(CardSo, update_cards)
+        if create_cards:
+            db.bulk_save_objects(create_cards)
         db.commit()
-        return update_card
+        return {
+            "create_list": [c.search_id for c in create_cards],
+            "update_list": [c.get("id") for c in update_cards],
+                }
 
     def upload_wallets(self, db: Session):
-        response_wallets = wallets.search(page_size=1000500, type="company").data.results
+        response_wallets = wallets.search(page_size=self.settings.UPLOAD_SIZE, type="company").data.results
         query_wallets = db.query(WalletSo).filter(WalletSo.search_id is not None).all()
 
         list_wallets_id = []
-        list_wallets = []
+        list_wallets = {}
         for w in query_wallets:
             list_wallets_id.append(w.search_id)
-            list_wallets.append({"search_id": w.search_id, "id": w.id})
+            list_wallets[w.search_id] = w.id
 
         filter_wallet = list(filter(
             lambda w: w.id in list_wallets_id,
@@ -134,20 +188,16 @@ class Soldo(EventMixer, BaseNetworkClient):
         ))
         update_wallets = []
         for wallet in filter_wallet:
-            response_wallet = list(filter(
-                lambda w: w.get("search_id") == wallet.id ,
-                list_wallets
-            ))
-            if response_wallet:
-                update_wallets.append({
-                    "id": response_wallet[0].get("id"),
+            wallet_id = list_wallets.get(wallet.id)
+            update_wallets.append({
+                    "id": wallet_id,
                     "balance": wallet.available_amount,
                     "blocked_balance": wallet.blocked_amount
                 })
 
         db.bulk_update_mappings(WalletSo, update_wallets)
         db.commit()
-        return update_wallets
+        return list_wallets
 
     def wallet_update_balance(self, db: Session, wallet_id: int):
         wallet = db.query(WalletSo).filter(WalletSo.id == wallet_id).first()
@@ -171,6 +221,7 @@ class Soldo(EventMixer, BaseNetworkClient):
         response_card = response_data.data
         card_obj.PAN = response_card.pan
         card_obj.cvv = response_card.cvv
+        card_obj.name = response_card.name
         card_obj.type = response_card.type
         card_obj.created_on = response_card.creation_time
         card_obj.expiry = response_card.expiration_date.date()
@@ -180,18 +231,16 @@ class Soldo(EventMixer, BaseNetworkClient):
         return card_obj
 
     def create_card(self, db: Session, user_id: int,
-                    name: str = None, emboss_line4: str = None, type="VIRTUAL", card_label=None):
+                    name: str, emboss_line4: str = None, type="VIRTUAL", card_label=None):
         wallet = db.query(WalletSo).filter(WalletSo.user_id == user_id).first()
-        user = wallet.user
 
         if not card_label:
-            card_label = self.settings.name
+            user = db.query(self._user).filter(self._user.id == user_id).first()
+            card_label = user.email
 
-        if not name:
-            name = user.email
 
         response_data = card.create(
-            owner_public_id=wallet.search_id,
+            # owner_public_id=wallet.search_id,
             wallet_id=wallet.search_id,
             name=name,
             emboss_line4=emboss_line4,

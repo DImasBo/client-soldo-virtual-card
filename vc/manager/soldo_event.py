@@ -63,17 +63,23 @@ class EventMixer:
         return wallet
 
     def store_order_completed(self, db, **data):
-        order = self.get_cache(data.get("id"))
+        print(data)
+        order = self.get_cache_by_key(data.get("id"))
+        print(order)
         for i in data.get("items"):
             category = i.get("category")
+            print(category)
             if category == "CARD":
                 print(i)
                 print(order)
-                card = CardSo(search_id=i.get("id"), wallet_id=order.get("wallet_id"))
-                self.save_obj(db, card)
+                card = db.query(CardSo).filter(CardSo.search_id==i.get("id")).first()
+                if not card:
+                    card = CardSo(search_id=i.get("id"), wallet_id=order.get("wallet_id"))
+                    self.save_obj(db, card)
 
                 card = self.update_info_card(db, card.id)
                 print(card)
                 print(card.__dict__)
                 self.add_item_to_group(card.search_id, type="CARD")
                 self.wallet_update_balance(db, card.wallet_id)
+                self.remove_cache(data.get("id"))

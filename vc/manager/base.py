@@ -69,7 +69,7 @@ class BaseNetworkClient(object):
     def create_wallet(self, db: Session,id: int):
         return NotImplementedError
 
-    def create_card(self, request_timestamp, owner_type, owner_public_id,
+    def create_card(self, owner_type, owner_public_id,
                     wallet_id, type, name, emboss_line4, card_label="aff"):
         return NotImplementedError
 

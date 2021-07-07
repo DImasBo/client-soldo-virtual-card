@@ -78,10 +78,21 @@ class CardResponse(ResponseInfo):
         return values
 
 
+class CardRule(BaseModel):
+    name: str
+    enabled: Optional[bool]
+    amount: Optional[Decimal]
+
+
+class ListRules(BaseModel):
+    rules: List[CardRule]
+
+
 class PaginateList(GenericModel, Generic[T]):
     results: List[T]
     current_page: int
     page_size: int
+    pages: int
     results_size: int
     total: int
 

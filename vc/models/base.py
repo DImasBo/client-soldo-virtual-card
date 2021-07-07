@@ -10,7 +10,6 @@ from vc.db.models import StatusCard
 
 class UserBase(Base):
     __tablename__ = "user"
-    soldo_id = Column(String(100))
     email = Column(String, nullable=False)
     first_name = Column(String)
     last_name = Column(String)
@@ -36,6 +35,7 @@ class CardStatus(str, Enum):
 class CardType(str, Enum):
     virtual_multi_use = "Virtual multi use"
     virtual = "VIRTUAL"
+    google = "GOOGLE_CARD"
     single_load_card = "Single load card"
 
 

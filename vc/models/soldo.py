@@ -33,7 +33,7 @@ class CardStatus(str, Enum):
 
 class CardSo(CardBase, DateFixedMixin, SoldoBase):
     __tablename__ = "soldo_card"
-    label = Column(String)
+    name = Column(String)
     wallet_id = Column(Integer, ForeignKey("soldo_wallet.id", ondelete="CASCADE"))
     wallet = relationship("WalletSo", backref="cards")
     type = Column(String, default=CardType.virtual.value)
