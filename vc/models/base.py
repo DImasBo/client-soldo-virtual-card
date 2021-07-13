@@ -55,7 +55,7 @@ class WalletBase:
     search_id = Column(String)
     status = Column(String(15), default=WalletStatus.deactivated.value)
     balance = Column(Numeric, nullable=False, default=0)
-    currency = Column(String(10), default="USD")
+    currency = Column(String(10), default="EUR")
 
     @declared_attr
     def user_id(cls):

@@ -3,6 +3,7 @@ from .requesters.requester_base import RequesterSoldoBase
 from .requesters.schemas import ResponseInfo, UserBase, Order, OrderItem, CardResponse, UserResponse, PaginateList, \
     WalletBase, ListRules, CardRule
 import copy
+from decimal import Decimal
 from .requesters.utils import request_timestamp
 
 
@@ -50,6 +51,16 @@ class User(RequesterSoldoBase):
 
 
 class Wallets(RequesterSoldoBase):
+
+    @response_builder(data_schema=ResponseInfo)
+    def internal_transfer(self, amount: Decimal, toWalletId: str, fromWalletId: str, currencyCode: str= "EUR"):
+        return self.request(
+            f"/business/v2/wallets/internalTransfer/{fromWalletId}/{toWalletId}",
+            method='put',
+            headers=self.advanced_authorize(
+                dict(toWalletId=toWalletId, fromWalletId=fromWalletId, amount=amount, currencyCode=currencyCode),
+                fields=("amount", "currencyCode", "fromWalletId", "toWalletId")
+            ).dict(by_alias=True), json=dict(amount=amount, currencyCode=currencyCode))
 
     @response_builder(data_schema=WalletBase)
     def get(self, wallet_id: str):
@@ -134,7 +145,7 @@ class Card(RequesterSoldoBase):
         return self.request(
             f"/business/v2/cards/{card_id}/rules", method='put', json=data,
             headers=self.advanced_authorize(
-                data_h, fields=("name", "amount", "enabled")).dict())
+                data_h, fields=("name", "amount", "enabled")).dict(by_alias=True))
 
     @response_builder(data_schema=PaginateList[CardResponse])
     def search(self, page=0, page_size=50, **data):

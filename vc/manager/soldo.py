@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
-
+from decimal import Decimal
 from sqlalchemy.orm import Session
 
 from .base import BaseNetworkClient
@@ -30,7 +30,7 @@ class SoldoException(Exception):
 
 class Soldo(EventMixer, BaseNetworkClient):
     settings = Settings({
-        "ACCESS_TOKEN": "c4R6RI7XHwTXHYCVUhx53mdCEICXWlEP",
+        "ACCESS_TOKEN": "rB3MMCWiFKVCK2IiCHq7Jt5GWNi7Gmkf",
     })
     event_list = ["new_user", "wallet_created", "store_order_completed"]
     __cache = {'c274b136-5999-4626-850c-46f5db5e5473':
@@ -56,14 +56,16 @@ class Soldo(EventMixer, BaseNetworkClient):
                  client_secret: str,
                  group_id: str,
                  token: str,
-                 wallet_safe: str,
+                 safe_wallet: str,
+                 safe_user: str,
                  filepath_private_pem: str, log_file: str = None, currency="USD", user_model=None, **config):
         data = dict(name=name, currency=currency,
                     CLIENT_ID=client_id,
                     CLIENT_SECRET=client_secret,
                     API_URL=api_url,
                     TOKEN=token,
-                    WALLET_SAFE=wallet_safe,
+                    SAFE_WALLET=safe_wallet,
+                    SAFE_USER=safe_user,
                     USER_MODEL=user_model,
                     UPLOAD_SIZE=1000500,
                     RULES=["OpenClose", "MaxPerTx"],
@@ -72,7 +74,30 @@ class Soldo(EventMixer, BaseNetworkClient):
                     GROUP_ID=group_id, **config)
         set_config(logger, filename=Soldo.settings.LOG_FILE)
         Soldo.settings.update_config(**data)
+
         super().__init__(uri, user_model=user_model, **config)
+        self.set_safe(safe_wallet, safe_user)
+
+    def set_safe(self, wallet_id: str, user_email: str):
+
+        wallet = wallets.get(wallet_id=wallet_id).data
+        with self.get_session() as session:
+            user = session.query(self._user).filter(self._user.email == user_email).first()
+
+            wallet_q = session.query(WalletSo).filter(WalletSo.search_id==wallet_id).first()
+            update_data = dict(
+                user_id=user.id,
+                search_id=wallet.id,
+                balance=wallet.available_amount,
+                blocked_balance=wallet.blocked_amount,
+                currency=wallet.currency_code
+            )
+            if not wallet_q:
+                wallet_q = WalletSo()
+            for field in update_data:
+                setattr(wallet_q, field, update_data[field])
+            self.save_obj(session, obj=wallet_q)
+        return wallet_q
 
     def activate_service(self, db: Session, user_id: int, owner_type="company"):
         user = db.query(self._user).filter(self._user.id == user_id).first()
@@ -140,7 +165,7 @@ class Soldo(EventMixer, BaseNetworkClient):
                 update_cards.append({
                     "id": card_id,
                     "status": model.status,
-                    "label": model.label
+                    "name": model.name
                 })
             else:
                 create_cards_id.append(model.id)
@@ -172,6 +197,19 @@ class Soldo(EventMixer, BaseNetworkClient):
             "update_list": [c.get("id") for c in update_cards],
                 }
 
+    def internal_transfer(self, db: Session, from_wallet_id: int, to_wallet_id: int, amount: Decimal, currency: str ="EUR"):
+        from_wallet = db.query(WalletSo).filter(WalletSo.id==from_wallet_id).first()
+        to_wallet = db.query(WalletSo).filter(WalletSo.id==to_wallet_id).first()
+        response_data = wallets.internal_transfer(
+            amount=amount,
+            toWalletId=to_wallet.search_id,
+            fromWalletId=from_wallet.search_id,
+            currencyCode=currency
+        ).data
+        print(response_data)
+        return response_data
+
+
     def upload_wallets(self, db: Session):
         response_wallets = wallets.search(page_size=self.settings.UPLOAD_SIZE, type="company").data.results
         query_wallets = db.query(WalletSo).filter(WalletSo.search_id is not None).all()
@@ -192,7 +230,8 @@ class Soldo(EventMixer, BaseNetworkClient):
             update_wallets.append({
                     "id": wallet_id,
                     "balance": wallet.available_amount,
-                    "blocked_balance": wallet.blocked_amount
+                    "blocked_balance": wallet.blocked_amount,
+                    "currency": wallet.currency_code
                 })
 
         db.bulk_update_mappings(WalletSo, update_wallets)
