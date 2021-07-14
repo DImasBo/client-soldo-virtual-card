@@ -81,7 +81,7 @@ class CardResponse(ResponseInfo):
 class CardRule(BaseModel):
     name: str
     enabled: Optional[bool]
-    amount: Optional[Decimal]
+    amount: Optional[float]
 
 
 class ListRules(BaseModel):

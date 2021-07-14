@@ -28,14 +28,23 @@ class SoldoException(Exception):
         return f"{self.msg}, {str(self.response_data)}"
 
 
+def card_issue():
+    return 7
+
+
 class Soldo(EventMixer, BaseNetworkClient):
     settings = Settings({
-        "ACCESS_TOKEN": "rB3MMCWiFKVCK2IiCHq7Jt5GWNi7Gmkf",
+        "ACCESS_TOKEN": "dFTPdcdQqHXI3GSJhPr5b2MAihDXGqWR",
     })
     event_list = ["new_user", "wallet_created", "store_order_completed"]
     __cache = {'c274b136-5999-4626-850c-46f5db5e5473':
                    {"id": "1d4df4f9-0c89-4913-8d68-8e6c9d19c611", 'wallet_id': 1, 'status': 'PLACED',
                     "category": "CARD"}, }
+    __card_issue = None # function get card issue
+
+    @property
+    def card_issue(self):
+        return self.__card_issue()
 
     def get_cache(self):
         return self.__cache
@@ -58,7 +67,8 @@ class Soldo(EventMixer, BaseNetworkClient):
                  token: str,
                  safe_wallet: str,
                  safe_user: str,
-                 filepath_private_pem: str, log_file: str = None, currency="USD", user_model=None, **config):
+                 filepath_private_pem: str,
+                 card_issue=card_issue, log_file: str = None, currency="USD", user_model=None, **config):
         data = dict(name=name, currency=currency,
                     CLIENT_ID=client_id,
                     CLIENT_SECRET=client_secret,
@@ -206,9 +216,14 @@ class Soldo(EventMixer, BaseNetworkClient):
             fromWalletId=from_wallet.search_id,
             currencyCode=currency
         ).data
-        print(response_data)
         return response_data
 
+    def internal_transfer_to_safe(self, db: Session, from_wallet_id: int, amount: Decimal,
+                          currency: str = "EUR"):
+        return internal_transfer(
+            db, from_wallet_id=from_wallet_id,
+            to_wallet_id=self.settings.SAFE_WALLET,
+            amount=amount, currency=currency)
 
     def upload_wallets(self, db: Session):
         response_wallets = wallets.search(page_size=self.settings.UPLOAD_SIZE, type="company").data.results
@@ -272,14 +287,14 @@ class Soldo(EventMixer, BaseNetworkClient):
     def create_card(self, db: Session, user_id: int,
                     name: str, emboss_line4: str = None, type="VIRTUAL", card_label=None):
         wallet = db.query(WalletSo).filter(WalletSo.user_id == user_id).first()
-
+        self.internal_transfer_to_safe(db, wallet.id, amount=self.card_issue)
         if not card_label:
             user = db.query(self._user).filter(self._user.id == user_id).first()
             card_label = user.email
 
 
         response_data = card.create(
-            # owner_public_id=wallet.search_id,
+            owner_public_id=None,
             wallet_id=wallet.search_id,
             name=name,
             emboss_line4=emboss_line4,
@@ -295,6 +310,7 @@ class Soldo(EventMixer, BaseNetworkClient):
             "category": "CARD"
         }
         self.__cache[order.id] = result
+        card = CardSo(wallet_id)
         return result
 
     def add_item_to_group(self, id: str, type="WALLET", groupId: str = None):

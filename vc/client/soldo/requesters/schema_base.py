@@ -15,6 +15,7 @@ class HeadersSoldoBase(BaseModel):
     headers for Standard Authentication
     http://apidoc-demo.soldo.com/v2/zgxiaxtcyapyoijojoef.html#standard-authentication
     """
+    Content_Type: str = "application/json"
     Authorization: Optional[str]
 
     def __init__(self, *args, **kwargs):
@@ -24,6 +25,9 @@ class HeadersSoldoBase(BaseModel):
 
     class Config:
         extra = Extra.allow
+        fields = {
+            "Content_Type": "Content-Type"
+        }
 
 
 class HeadersSoldo(HeadersSoldoBase):
@@ -59,5 +63,6 @@ class HeadersSoldo(HeadersSoldoBase):
         fields = {
             "fingerprintS": "X-Soldo-Fingerprint-Signature",
             "fingerprintH": "X-Soldo-Fingerprint",
+            "Content_Type": "Content-Type"
         }
         extra = Extra.allow

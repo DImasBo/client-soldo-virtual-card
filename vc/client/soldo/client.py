@@ -54,13 +54,15 @@ class Wallets(RequesterSoldoBase):
 
     @response_builder(data_schema=ResponseInfo)
     def internal_transfer(self, amount: Decimal, toWalletId: str, fromWalletId: str, currencyCode: str= "EUR"):
-        return self.request(
-            f"/business/v2/wallets/internalTransfer/{fromWalletId}/{toWalletId}",
-            method='put',
-            headers=self.advanced_authorize(
+        headers = self.advanced_authorize(
                 dict(toWalletId=toWalletId, fromWalletId=fromWalletId, amount=amount, currencyCode=currencyCode),
                 fields=("amount", "currencyCode", "fromWalletId", "toWalletId")
-            ).dict(by_alias=True), json=dict(amount=amount, currencyCode=currencyCode))
+            )
+        headers.Content_Type = "application/x-www-form-urlencoded"
+        return self.request(
+            f"/business/v2/wallets/internalTransfer/{fromWalletId}/{toWalletId}",
+            method='PUT',
+            headers=headers.dict(by_alias=True), data=dict(amount=amount, currencyCode=currencyCode))
 
     @response_builder(data_schema=WalletBase)
     def get(self, wallet_id: str):
@@ -140,12 +142,10 @@ class Card(RequesterSoldoBase):
             enabled=enabled,
             amount=amount).dict(exclude_none=None)
         print(data)
-        data_h = copy.copy(data)
-        # data_h["name"] = name.lower()
         return self.request(
             f"/business/v2/cards/{card_id}/rules", method='put', json=data,
             headers=self.advanced_authorize(
-                data_h, fields=("name", "amount", "enabled")).dict(by_alias=True))
+                data, fields=("name", "amount", "enabled")).dict(by_alias=True))
 
     @response_builder(data_schema=PaginateList[CardResponse])
     def search(self, page=0, page_size=50, **data):
