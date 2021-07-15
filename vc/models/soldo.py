@@ -1,6 +1,6 @@
 from enum import Enum
 
-from sqlalchemy import Column, Numeric, String, ForeignKey, Integer
+from sqlalchemy import Column, Numeric, String, ForeignKey, Integer, Boolean, DateTime
 from sqlalchemy.ext.declarative import as_declarative
 from sqlalchemy.orm import relationship
 
@@ -38,3 +38,19 @@ class CardSo(CardBase, DateFixedMixin, SoldoBase):
     wallet = relationship("WalletSo", backref="cards")
     type = Column(String, default=CardType.virtual.value)
     status = Column(String(20), default=CardStatus.pending.value)
+    is_webhook = Column(Boolean, default=False, nullable=False)
+
+
+class TransactionSo(SoldoBase):
+    __tablename__ = "soldo_transaction"
+    wallet_id = Column(Integer, ForeignKey("soldo_wallet.id", ondelete="CASCADE"))
+    wallet = relationship("WalletSo", backref="transactions")
+    search_id = Column(String)
+    category = Column(String)
+    amount = Column(Numeric)
+    tx_amount_currency = Column(String(10))
+    status = Column(String)
+    date = Column(DateTime)
+    update_time = Column(DateTime)
+    fee_amount = Column(Numeric)
+    fee_currency = Column(String(10))

@@ -1,8 +1,14 @@
+import logging
 from datetime import datetime
 
 from sqlalchemy.orm import Session
+from vc.libs.utils import set_config
 
 from vc.models.soldo import WalletSo, CardSo
+
+
+logger = logging.getLogger(__name__)
+set_config(logger, filename="/app/logs/soldo.log")
 
 
 class EventMixer:
@@ -63,23 +69,21 @@ class EventMixer:
         return wallet
 
     def store_order_completed(self, db, **data):
-        print(data)
-        order = self.get_cache_by_key(data.get("id"))
-        print(order)
+        cache = self.get_cache_by_key(data.get("id"))
         for i in data.get("items"):
+            logger.info(cache)
             category = i.get("category")
-            print(category)
+            logger.debug(category)
             if category == "CARD":
-                print(i)
-                print(order)
+                logger.debug(i)
                 card = db.query(CardSo).filter(CardSo.search_id==i.get("id")).first()
                 if not card:
-                    card = CardSo(search_id=i.get("id"), wallet_id=order.get("wallet_id"))
+                    card = CardSo(search_id=i.get("id"), wallet_id=cache.get("wallet_id"), is_webhook=True)
                     self.save_obj(db, card)
 
                 card = self.update_info_card(db, card.id)
-                print(card)
-                print(card.__dict__)
+                logger.debug(card)
+                logger.debug(card.__dict__)
                 self.add_item_to_group(card.search_id, type="CARD")
                 self.wallet_update_balance(db, card.wallet_id)
                 self.remove_cache(data.get("id"))

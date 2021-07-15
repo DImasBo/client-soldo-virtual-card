@@ -12,3 +12,12 @@ def set_config(logger, filename: str = None):
         fh = TimedRotatingFileHandler(filename, when="W0", backupCount=2)
     fh.setFormatter(formatter)
     logger.addHandler(fh)
+
+
+def generate_list_model_search_id(query_model):
+    list_model_id = []
+    list_model = {}
+    for w in query_model:
+        list_model_id.append(w.search_id)
+        list_model[w.search_id] = w.id
+    return list_model_id, list_model

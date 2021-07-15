@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime,timedelta
 from logging.handlers import TimedRotatingFileHandler
 from decimal import Decimal
 from sqlalchemy.orm import Session
@@ -8,14 +8,14 @@ from .base import BaseNetworkClient
 
 # from vc.
 from vc.client.soldo import user, wallets, card, group, order, transaction
-from vc.models.soldo import WalletSo, CardSo
+from vc.models.soldo import WalletSo, CardSo, TransactionSo
 from vc.settings import Settings
 from .soldo_event import EventMixer
-from vc.libs.utils import set_config
+from vc.libs.utils import set_config, generate_list_model_search_id
 from decimal import Decimal
 
 logger = logging.getLogger(__name__)
-# set_config(logger, filename="soldo2.log")
+set_config(logger, filename="/app/logs/soldo.log")
 
 
 class SoldoException(Exception):
@@ -82,7 +82,6 @@ class Soldo(EventMixer, BaseNetworkClient):
                     LOG_FILE=log_file,
                     PATH_RSA_PRIVATE=filepath_private_pem,
                     GROUP_ID=group_id, **config)
-        set_config(logger, filename=Soldo.settings.LOG_FILE)
         Soldo.settings.update_config(**data)
 
         super().__init__(uri, user_model=user_model, **config)
@@ -150,17 +149,8 @@ class Soldo(EventMixer, BaseNetworkClient):
         query_wallets = db.query(WalletSo).filter(WalletSo.search_id is not None).all()
         query_cards = db.query(CardSo).filter(CardSo.search_id is not None).all()
 
-        list_model_id = []
-        list_model = {}
-        for w in query_cards:
-            list_model_id.append(w.search_id)
-            list_model[w.search_id] = w.id
-
-        list_wallets_id = []
-        list_wallets = {}
-        for w in query_wallets:
-            list_wallets_id.append(w.search_id)
-            list_wallets[w.search_id] = w.id
+        list_model_id, list_model = generate_list_model_search_id(query_cards)
+        list_wallets_id, list_wallets = generate_list_model_search_id(query_wallets)
 
         filter_model = list(filter(
             lambda w: w.wallet_id in list_wallets_id,
@@ -225,16 +215,70 @@ class Soldo(EventMixer, BaseNetworkClient):
             to_wallet_id=self.settings.SAFE_WALLET,
             amount=amount, currency=currency)
 
+    def upload_transaction_wallet(self, db: Session, **kwargs):
+        date_to = datetime.now()
+        date_from = date_to - timedelta(days=2)
+        query_transactions = db.query(TransactionSo).filter(
+            TransactionSo.date >= date_from,
+            TransactionSo.date <= date_to + timedelta(days=1),
+        ).all()
+        query_wallets = db.query(WalletSo).filter(WalletSo.search_id is not None).all()
+        print(query_transactions)
+
+        list_trans_id, list_trans = generate_list_model_search_id(query_transactions)
+        list_wallet_id, list_wallet = generate_list_model_search_id(query_wallets)
+
+        response_data = transaction.search(
+            page_size=self.settings.UPLOAD_SIZE,
+            toDate=date_to.strftime(self.format_date),
+            fromDate=date_from.strftime(self.format_date), **kwargs).data
+        # filter wallet_id
+        trans_by_wallet_id = list(filter(
+            lambda trans: trans.wallet_id in list_wallet_id,
+            response_data.results
+        ))
+        print(trans_by_wallet_id)
+        # return
+
+        create_transaction = []
+        update_transaction = []
+        columns = [c.name for c in TransactionSo.__table__.columns]
+        columns.remove("id")
+        for trans in trans_by_wallet_id:
+            data = {}
+            for c in columns:
+                data[c] = getattr(trans, c, None)
+            data["search_id"] = trans.id
+            data['wallet_id'] = list_wallet.get(trans.wallet_id)
+
+            trans_id  = list_trans.get(trans.id)
+            if trans_id:
+                data.update(dict(
+                    id=trans_id,
+                    search_id=trans.id
+                ))
+                update_transaction.append(data)
+            else:
+                create_transaction.append(
+                    TransactionSo(
+                        **data,
+                    ))
+
+
+        db.bulk_update_mappings(TransactionSo, update_transaction)
+        if create_transaction:
+            db.bulk_save_objects(create_transaction)
+        db.commit()
+        return {
+            "create_list": [c.search_id for c in create_transaction],
+            "update_list": [c.get("id") for c in update_transaction],
+                }
+
     def upload_wallets(self, db: Session):
         response_wallets = wallets.search(page_size=self.settings.UPLOAD_SIZE, type="company").data.results
         query_wallets = db.query(WalletSo).filter(WalletSo.search_id is not None).all()
 
-        list_wallets_id = []
-        list_wallets = {}
-        for w in query_wallets:
-            list_wallets_id.append(w.search_id)
-            list_wallets[w.search_id] = w.id
-
+        list_wallets_id, list_wallets = generate_list_model_search_id(query_wallets)
         filter_wallet = list(filter(
             lambda w: w.id in list_wallets_id,
             response_wallets
