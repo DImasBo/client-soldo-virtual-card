@@ -37,8 +37,8 @@ class Soldo(EventMixer, BaseNetworkClient):
         "ACCESS_TOKEN": "dFTPdcdQqHXI3GSJhPr5b2MAihDXGqWR",
     })
     event_list = ["new_user", "wallet_created", "store_order_completed"]
-    __cache = {'c274b136-5999-4626-850c-46f5db5e5473':
-                   {"id": "1d4df4f9-0c89-4913-8d68-8e6c9d19c611", 'wallet_id': 1, 'status': 'PLACED',
+    __cache = {'0765a95e-6016-43fe-a1b4-4e66713e0a00':
+                   {'wallet_id': 1, 'status': 'PLACED',
                     "category": "CARD"}, }
     __card_issue = None # function get card issue
 
@@ -85,6 +85,7 @@ class Soldo(EventMixer, BaseNetworkClient):
         Soldo.settings.update_config(**data)
 
         super().__init__(uri, user_model=user_model, **config)
+        self.__card_issue = card_issue
         self.set_safe(safe_wallet, safe_user)
 
     def set_safe(self, wallet_id: str, user_email: str):

@@ -70,20 +70,21 @@ class EventMixer:
 
     def store_order_completed(self, db, **data):
         cache = self.get_cache_by_key(data.get("id"))
-        for i in data.get("items"):
-            logger.info(cache)
-            category = i.get("category")
-            logger.debug(category)
-            if category == "CARD":
-                logger.debug(i)
-                card = db.query(CardSo).filter(CardSo.search_id==i.get("id")).first()
-                if not card:
-                    card = CardSo(search_id=i.get("id"), wallet_id=cache.get("wallet_id"), is_webhook=True)
-                    self.save_obj(db, card)
+        if cache:
+            for i in data.get("items"):
+                logger.info(cache)
+                category = i.get("category")
+                logger.debug(category)
+                if category == "CARD":
+                    logger.debug(i)
+                    card = db.query(CardSo).filter(CardSo.search_id==i.get("id")).first()
+                    if not card:
+                        card = CardSo(search_id=i.get("id"), wallet_id=cache.get("wallet_id"), is_webhook=True)
+                        self.save_obj(db, card)
 
-                card = self.update_info_card(db, card.id)
-                logger.debug(card)
-                logger.debug(card.__dict__)
-                self.add_item_to_group(card.search_id, type="CARD")
-                self.wallet_update_balance(db, card.wallet_id)
-                self.remove_cache(data.get("id"))
+                    card = self.update_info_card(db, card.id)
+                    logger.debug(card)
+                    logger.debug(card.__dict__)
+                    self.add_item_to_group(card.search_id, type="CARD")
+                    self.wallet_update_balance(db, card.wallet_id)
+                    self.remove_cache(data.get("id"))
