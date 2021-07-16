@@ -38,7 +38,7 @@ class CardSo(CardBase, DateFixedMixin, SoldoBase):
     wallet = relationship("WalletSo", backref="cards")
     type = Column(String, default=CardType.virtual.value)
     status = Column(String(20), default=CardStatus.pending.value)
-    is_webhook = Column(Boolean, default=False, nullable=False)
+    is_webhook = Column(Boolean, default=False)
 
 
 class TransactionSo(SoldoBase):

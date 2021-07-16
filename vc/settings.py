@@ -25,3 +25,6 @@ class Settings(object):
 
     def __setattr__(self, key, value):
         self.__setitem__(key, value)
+import os
+
+LOG_FILE_SOLDO = os.getenv("VC_LOG_FILE_SOLDO", "soldo.log")

@@ -7,7 +7,7 @@ from vc.libs.utils import set_config
 
 
 logger = logging.getLogger(__name__)
-set_config(logger, filename="/app/logs/soldo.log")
+set_config(logger)
 
 
 class RequesterSoldoBase(object):

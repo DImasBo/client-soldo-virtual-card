@@ -15,7 +15,7 @@ from vc.libs.utils import set_config, generate_list_model_search_id
 from decimal import Decimal
 
 logger = logging.getLogger(__name__)
-set_config(logger, filename="/app/logs/soldo.log")
+set_config(logger)
 
 
 class SoldoException(Exception):
@@ -43,7 +43,7 @@ class Soldo(EventMixer, BaseNetworkClient):
     __card_issue = None # function get card issue
 
     @property
-    def card_issue(self):
+    def card_price(self):
         return self.__card_issue()
 
     def get_cache(self):
@@ -211,10 +211,15 @@ class Soldo(EventMixer, BaseNetworkClient):
 
     def internal_transfer_to_safe(self, db: Session, from_wallet_id: int, amount: Decimal,
                           currency: str = "EUR"):
-        return internal_transfer(
-            db, from_wallet_id=from_wallet_id,
-            to_wallet_id=self.settings.SAFE_WALLET,
-            amount=amount, currency=currency)
+        from_wallet = db.query(WalletSo).filter(WalletSo.id==from_wallet_id).first()
+        to_wallet = db.query(WalletSo).filter(WalletSo.search_id==self.settings.SAFE_WALLET).first()
+        response_data = wallets.internal_transfer(
+            amount=amount,
+            toWalletId=to_wallet.search_id,
+            fromWalletId=from_wallet.search_id,
+            currencyCode=currency
+        ).data
+        return response_data
 
     def upload_transaction_wallet(self, db: Session, **kwargs):
         date_to = datetime.now()
@@ -332,7 +337,7 @@ class Soldo(EventMixer, BaseNetworkClient):
     def create_card(self, db: Session, user_id: int,
                     name: str, emboss_line4: str = None, type="VIRTUAL", card_label=None):
         wallet = db.query(WalletSo).filter(WalletSo.user_id == user_id).first()
-        self.internal_transfer_to_safe(db, wallet.id, amount=self.card_issue)
+        self.internal_transfer_to_safe(db, wallet.id, amount=self.card_price)
         if not card_label:
             user = db.query(self._user).filter(self._user.id == user_id).first()
             card_label = user.email
@@ -355,8 +360,7 @@ class Soldo(EventMixer, BaseNetworkClient):
             "category": "CARD"
         }
         self.__cache[order.id] = result
-        card = CardSo(wallet_id)
-        return result
+        return {order.id: result}
 
     def add_item_to_group(self, id: str, type="WALLET", groupId: str = None):
         if not groupId:

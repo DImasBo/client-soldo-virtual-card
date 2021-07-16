@@ -8,7 +8,7 @@ from vc.models.soldo import WalletSo, CardSo
 
 
 logger = logging.getLogger(__name__)
-set_config(logger, filename="/app/logs/soldo.log")
+set_config(logger)
 
 
 class EventMixer:

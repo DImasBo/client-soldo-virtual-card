@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='virtual_cards',
-    version='0.0.23',
+    version='0.0.28',
     url=' ',
     license='MIT',
     author='Dmytro Bondar',
